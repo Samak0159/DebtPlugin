@@ -55,7 +55,7 @@ class DebtToolWindow(private val project: Project) {
                 if (e.clickCount == 2) {
                     val row = table.selectedRow
                     if (row >= 0) {
-                        val file = table.getValueAt(row, 0) as String
+                        val file = tableModel.debtItems[row].file
                         val line = table.getValueAt(row, 1) as Int
                         val virtualFile = LocalFileSystem.getInstance().findFileByPath(file)
                         if (virtualFile != null) {

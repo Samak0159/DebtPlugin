@@ -50,7 +50,8 @@ class DebtTableModel(private val debtService: DebtService) : DefaultTableModel()
     // Method to add DebtItem directly
     fun addDebtItem(debtItem: DebtItem) {
         debtItems.add(debtItem) // Add to internal list
-        addRow(arrayOf(debtItem.file, debtItem.line, debtItem.description, debtItem.status, debtItem.priority, debtItem.comment)) // Add only visible data to DefaultTableModel
+        val displayedFile = debtItem.file.substringAfterLast('\\').substringAfterLast('/')
+        addRow(arrayOf(displayedFile, debtItem.line, debtItem.description, debtItem.status, debtItem.priority, debtItem.comment)) // Add only visible data to DefaultTableModel
     }
 
     // Method to clear all debt items
