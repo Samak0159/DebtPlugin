@@ -5,6 +5,7 @@
     <vendor>fligneul</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
@@ -15,6 +16,7 @@
                 instance="com.github.fligneul.debtplugin.settings.DebtSettingsConfigurable"
                 id="com.github.fligneul.debtplugin.settings.DebtSettingsConfigurable"
                 displayName="Debt Plugin"/>
+        <codeInsight.lineMarkerProvider implementationClass="com.github.fligneul.debtplugin.debt.DebtGutterLineMarkerProvider"/>
     </extensions>
 
     <actions>

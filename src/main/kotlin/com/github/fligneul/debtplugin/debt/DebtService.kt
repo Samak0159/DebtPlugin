@@ -3,6 +3,7 @@ package com.github.fligneul.debtplugin.debt
 import com.github.fligneul.debtplugin.settings.DebtSettings
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -25,11 +26,13 @@ class DebtService(private val project: Project) {
     fun add(debtItem: DebtItem) {
         debts.add(debtItem)
         saveDebts()
+        refreshHighlighting()
     }
 
     fun remove(debtItem: DebtItem) {
         debts.remove(debtItem)
         saveDebts()
+        refreshHighlighting()
     }
 
     fun update(oldDebtItem: DebtItem, newDebtItem: DebtItem) {
@@ -37,6 +40,7 @@ class DebtService(private val project: Project) {
         if (index != -1) {
             debts[index] = newDebtItem
             saveDebts()
+            refreshHighlighting()
         }
     }
 
@@ -54,5 +58,10 @@ class DebtService(private val project: Project) {
 
     private fun saveDebts() {
         debtFile.writeText(gson.toJson(debts))
+    }
+
+    private fun refreshHighlighting() {
+        // Trigger re-highlighting so gutter markers update after debt changes
+        DaemonCodeAnalyzer.getInstance(project).restart()
     }
 }
