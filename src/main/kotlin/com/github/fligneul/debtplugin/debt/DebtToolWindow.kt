@@ -1,5 +1,7 @@
 package com.github.fligneul.debtplugin.debt
 
+import com.github.fligneul.debtplugin.settings.DebtSettings
+import com.github.fligneul.debtplugin.settings.DebtSettingsListener
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -29,19 +31,27 @@ class DebtToolWindow(private val project: Project) {
         val priorityComboBox = JComboBox(Priority.values())
         table.columnModel.getColumn(4).cellEditor = DefaultCellEditor(priorityComboBox)
 
-        table.columnModel.getColumn(6).cellRenderer = DeleteButtonCell { row ->
+        // Delete button column is at index 7
+        table.columnModel.getColumn(7).cellRenderer = DeleteButtonCell { row ->
             val debtItem = tableModel.debtItems[row]
             debtService.remove(debtItem)
             updateTable()
         }
-        table.columnModel.getColumn(6).cellEditor = DeleteButtonCell { row ->
+        table.columnModel.getColumn(7).cellEditor = DeleteButtonCell { row ->
             val debtItem = tableModel.debtItems[row]
             debtService.remove(debtItem)
             updateTable()
         }
-        table.columnModel.getColumn(6).preferredWidth = 30
-        table.columnModel.getColumn(6).maxWidth = 30
-        table.columnModel.getColumn(6).minWidth = 30
+        table.columnModel.getColumn(7).preferredWidth = 30
+        table.columnModel.getColumn(7).maxWidth = 30
+        table.columnModel.getColumn(7).minWidth = 30
+
+        // Refresh the table automatically when settings change (e.g., username updated)
+        project.messageBus.connect().subscribe(DebtSettings.TOPIC, object : DebtSettingsListener {
+            override fun settingsChanged(settings: DebtSettings.State) {
+                updateTable()
+            }
+        })
 
         val debtFile = LocalFileSystem.getInstance().findFileByIoFile(debtService.debtFile)
     }

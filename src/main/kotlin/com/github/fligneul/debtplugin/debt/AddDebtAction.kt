@@ -1,5 +1,6 @@
 package com.github.fligneul.debtplugin.debt
 
+import com.github.fligneul.debtplugin.settings.DebtSettings
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -16,12 +17,15 @@ class AddDebtAction : AnAction() {
         val dialog = AddDebtDialog()
         if (dialog.showAndGet()) {
             val debtService = project.service<DebtService>()
+            val settings = project.service<DebtSettings>()
+            val username = settings.getOrInitUsername()
             val debtItem = DebtItem(
                 file = file.path,
                 line = editor.caretModel.logicalPosition.line + 1,
                 description = dialog.description,
                 status = dialog.status,
-                priority = dialog.priority
+                priority = dialog.priority,
+                username = username
             )
             debtService.add(debtItem)
         }
