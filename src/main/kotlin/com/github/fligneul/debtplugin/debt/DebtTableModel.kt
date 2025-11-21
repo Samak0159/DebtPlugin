@@ -9,25 +9,33 @@ class DebtTableModel(private val debtService: DebtService) : DefaultTableModel()
     init {
         addColumn("File") // 0
         addColumn("Line") // 1
-        addColumn("Description") // 2
-        addColumn("Status") // 3
-        addColumn("Priority") // 4
-        addColumn("User") // 5
-        addColumn("Comment") // 6
-        addColumn("") // 7 action (delete)
+        addColumn("Title") // 2
+        addColumn("Description") // 3
+        addColumn("User") // 4
+        addColumn("WantedLevel") // 5
+        addColumn("Complexity") // 6
+        addColumn("Status") // 7
+        addColumn("Priority") // 8
+        addColumn("Risk") // 9
+        addColumn("TargetVersion") // 10
+        addColumn("Comment") // 11
+        addColumn("") // 12 action (delete)
     }
 
     override fun isCellEditable(row: Int, column: Int): Boolean {
         // Make the first two columns (File and Line) non-editable
-        // Also keep the User column (5) non-editable; Delete button column (7) must be editable for the button
-        return column >= 2 && column != 5
+        // Keep the User column (4) non-editable; Delete button column (12) must be editable for the button
+        return (column >= 2) && (column != 4)
     }
 
     override fun getColumnClass(columnIndex: Int): Class<*> {
         return when (columnIndex) {
-            3 -> Status::class.java // Status column
-            4 -> Priority::class.java // Priority column
-            7 -> Any::class.java // Action column (for button)
+            5 -> Int::class.java // WantedLevel column
+            6 -> Complexity::class.java // Complexity column
+            7 -> Status::class.java // Status column
+            8 -> Priority::class.java // Priority column
+            9 -> Risk::class.java // Risk column
+            12 -> Any::class.java // Action column (for button)
             else -> super.getColumnClass(columnIndex)
         }
     }
@@ -35,10 +43,22 @@ class DebtTableModel(private val debtService: DebtService) : DefaultTableModel()
     override fun setValueAt(aValue: Any?, row: Int, column: Int) {
         val oldDebtItem = debtItems[row]
         val updatedDebtItem = when (column) {
-            2 -> oldDebtItem.copy(description = aValue as String)
-            3 -> oldDebtItem.copy(status = aValue as Status)
-            4 -> oldDebtItem.copy(priority = aValue as Priority)
-            6 -> oldDebtItem.copy(comment = aValue as String)
+            2 -> oldDebtItem.copy(title = aValue as String)
+            3 -> oldDebtItem.copy(description = aValue as String)
+            5 -> {
+                val asInt = when (aValue) {
+                    is Number -> aValue.toInt()
+                    is String -> aValue.toIntOrNull() ?: oldDebtItem.wantedLevel
+                    else -> oldDebtItem.wantedLevel
+                }
+                oldDebtItem.copy(wantedLevel = asInt)
+            }
+            6 -> oldDebtItem.copy(complexity = aValue as Complexity)
+            7 -> oldDebtItem.copy(status = aValue as Status)
+            8 -> oldDebtItem.copy(priority = aValue as Priority)
+            9 -> oldDebtItem.copy(risk = aValue as Risk)
+            10 -> oldDebtItem.copy(targetVersion = aValue as String)
+            11 -> oldDebtItem.copy(comment = aValue as String)
             else -> oldDebtItem
         }
 
@@ -56,10 +76,15 @@ class DebtTableModel(private val debtService: DebtService) : DefaultTableModel()
         addRow(arrayOf(
             displayedFile,
             debtItem.line,
+            debtItem.title,
             debtItem.description,
+            debtItem.username,
+            debtItem.wantedLevel,
+            debtItem.complexity,
             debtItem.status,
             debtItem.priority,
-            debtItem.username ?: "",
+            debtItem.risk,
+            debtItem.targetVersion,
             debtItem.comment,
             null
         )) // Add only visible data to DefaultTableModel

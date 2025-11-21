@@ -22,7 +22,18 @@ class DebtService(private val project: Project) {
             val obj: JsonObject = json.asJsonObject
             val file = obj.get("file")?.asString ?: ""
             val line = obj.get("line")?.asInt ?: 1
+            val title = obj.get("title")?.asString ?: ""
             val description = obj.get("description")?.asString ?: ""
+            val username = obj.get("username")?.asString ?: ""
+            val wantedLevel = try {
+                obj.get("wantedLevel")?.asInt ?: 3
+            } catch (_: Exception) { 3 }
+            val complexityStr = obj.get("complexity")?.asString
+            val complexity = try {
+                if (complexityStr.isNullOrBlank()) Complexity.Medium else Complexity.valueOf(complexityStr)
+            } catch (_: Exception) {
+                Complexity.Medium
+            }
             val statusStr = obj.get("status")?.asString
             val status = try {
                 if (statusStr.isNullOrBlank()) Status.Submitted else Status.valueOf(statusStr)
@@ -35,16 +46,27 @@ class DebtService(private val project: Project) {
             } catch (_: Exception) {
                 Priority.Medium
             }
+            val riskStr = obj.get("risk")?.asString
+            val risk = try {
+                if (riskStr.isNullOrBlank()) Risk.Medium else Risk.valueOf(riskStr)
+            } catch (_: Exception) {
+                Risk.Medium
+            }
+            val targetVersion = obj.get("targetVersion")?.asString ?: ""
             val comment = obj.get("comment")?.asString ?: ""
-            val username = obj.get("username")?.asString ?: ""
             return DebtItem(
                 file = file,
                 line = line,
+                title = title,
                 description = description,
+                username = username,
+                wantedLevel = wantedLevel,
+                complexity = complexity,
                 status = status,
                 priority = priority,
-                comment = comment,
-                username = username
+                risk = risk,
+                targetVersion = targetVersion,
+                comment = comment
             )
         }
     }

@@ -22,10 +22,15 @@ class AddDebtAction : AnAction() {
             val debtItem = DebtItem(
                 file = file.path,
                 line = editor.caretModel.logicalPosition.line + 1,
+                title = dialog.titleText,
                 description = dialog.description,
+                username = username,
+                wantedLevel = dialog.wantedLevel,
+                complexity = dialog.complexity,
                 status = dialog.status,
                 priority = dialog.priority,
-                username = username
+                risk = dialog.risk,
+                targetVersion = dialog.targetVersion
             )
             debtService.add(debtItem)
         }

@@ -25,26 +25,32 @@ class DebtToolWindow(private val project: Project) {
     private val table = JBTable(tableModel)
 
     init {
+        val complexityComboBox = JComboBox(Complexity.values())
+        table.columnModel.getColumn(6).cellEditor = DefaultCellEditor(complexityComboBox)
+
         val statusComboBox = JComboBox(Status.values())
-        table.columnModel.getColumn(3).cellEditor = DefaultCellEditor(statusComboBox)
+        table.columnModel.getColumn(7).cellEditor = DefaultCellEditor(statusComboBox)
 
         val priorityComboBox = JComboBox(Priority.values())
-        table.columnModel.getColumn(4).cellEditor = DefaultCellEditor(priorityComboBox)
+        table.columnModel.getColumn(8).cellEditor = DefaultCellEditor(priorityComboBox)
 
-        // Delete button column is at index 7
-        table.columnModel.getColumn(7).cellRenderer = DeleteButtonCell { row ->
+        val riskComboBox = JComboBox(Risk.values())
+        table.columnModel.getColumn(9).cellEditor = DefaultCellEditor(riskComboBox)
+
+        // Delete button column is at index 12
+        table.columnModel.getColumn(12).cellRenderer = DeleteButtonCell { row ->
             val debtItem = tableModel.debtItems[row]
             debtService.remove(debtItem)
             updateTable()
         }
-        table.columnModel.getColumn(7).cellEditor = DeleteButtonCell { row ->
+        table.columnModel.getColumn(12).cellEditor = DeleteButtonCell { row ->
             val debtItem = tableModel.debtItems[row]
             debtService.remove(debtItem)
             updateTable()
         }
-        table.columnModel.getColumn(7).preferredWidth = 30
-        table.columnModel.getColumn(7).maxWidth = 30
-        table.columnModel.getColumn(7).minWidth = 30
+        table.columnModel.getColumn(12).preferredWidth = 30
+        table.columnModel.getColumn(12).maxWidth = 30
+        table.columnModel.getColumn(12).minWidth = 30
 
         // Refresh the table automatically when settings change (e.g., username updated)
         project.messageBus.connect().subscribe(DebtSettings.TOPIC, object : DebtSettingsListener {
