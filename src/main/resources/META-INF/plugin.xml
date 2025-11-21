@@ -10,7 +10,7 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="Technical Debt" anchor="bottom" factoryClass="com.github.fligneul.debtplugin.debt.DebtToolWindowFactory"/>
+        <toolWindow id="Technical Debt" anchor="bottom" icon="/icons/technicalDebt.svg" factoryClass="com.github.fligneul.debtplugin.debt.DebtToolWindowFactory"/>
         <projectConfigurable
                 parentId="tools"
                 instance="com.github.fligneul.debtplugin.settings.DebtSettingsConfigurable"
