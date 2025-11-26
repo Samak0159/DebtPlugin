@@ -1,8 +1,8 @@
 package com.github.fligneul.debtplugin.debt.glutter;
 
+import com.github.fligneul.debtplugin.debt.icons.DebtIcons;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
-import com.github.fligneul.debtplugin.debt.icons.DebtIcons;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
 import com.intellij.codeInsight.daemon.LineMarkerProvider;
 import com.intellij.openapi.editor.Document;
@@ -14,14 +14,16 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.Function;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
+import javax.swing.Icon;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.Collection;
+import java.util.Optional;
 
 public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAware {
     @Override
@@ -62,12 +64,19 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
         Function<PsiElement, String> tooltipProvider = psi -> {
             if (debtsOnLine.size() == 1) {
                 DebtItem d = debtsOnLine.get(0);
-                return "Debt: " + d.getDescription() + " [" + d.getStatus() + ", " + d.getPriority() + "]";
+                return """
+                            Debt
+                                %s
+                                by %s
+                        """.formatted(getDebtName(d), d.getUsername());
             } else {
                 StringBuilder sb = new StringBuilder();
-                sb.append("Debts (").append(debtsOnLine.size()).append("):\n");
                 for (DebtItem it : debtsOnLine) {
-                    sb.append("- ").append(it.getDescription()).append(" [").append(it.getStatus()).append(", ").append(it.getPriority()).append("]\n");
+                    sb.append("Debt : \n ")
+                            .append(getDebtName(it))
+                            .append(" \n by ")
+                            .append(it.getUsername())
+                            .append("\n");
                 }
                 return sb.toString();
             }
@@ -78,10 +87,20 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
                 firstNonWs.getTextRange(),
                 icon,
                 tooltipProvider,
-                (evt, el) -> {},
+                (evt, el) -> {
+                },
                 GutterIconRenderer.Alignment.LEFT,
                 () -> "Debt"
         );
+    }
+
+    private @NotNull String getDebtName(final DebtItem d) {
+        final String debtName = Optional.ofNullable(d.getTitle())
+                .filter(str -> !str.isBlank())
+                .or(() -> Optional.ofNullable(d.getDescription())
+                        .filter(str -> !str.isBlank()))
+                .orElse("UNKNOWN");
+        return debtName;
     }
 
     private static @Nullable PsiElement nextNonWhitespace(@Nullable PsiElement start) {
