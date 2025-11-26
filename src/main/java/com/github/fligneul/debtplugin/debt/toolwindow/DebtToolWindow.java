@@ -1,10 +1,10 @@
 package com.github.fligneul.debtplugin.debt.toolwindow;
 
+import com.github.fligneul.debtplugin.debt.model.Complexity;
+import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
-import com.github.fligneul.debtplugin.debt.model.Complexity;
-import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettingsListener;
@@ -16,11 +16,16 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
 
-import javax.swing.*;
+import javax.swing.DefaultCellEditor;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JPanel;
 import javax.swing.table.TableColumn;
-import java.awt.*;
+import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class DebtToolWindow {
     private final Project project;
@@ -85,9 +90,20 @@ public class DebtToolWindow {
                 if (e.getClickCount() == 2) {
                     int row = table.getSelectedRow();
                     if (row >= 0) {
-                        String file = tableModel.debtItems.get(row).getFile();
+                        String stored = tableModel.debtItems.get(row).getFile();
                         int line = (Integer) table.getValueAt(row, 1);
-                        VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(file);
+                        String basePath = project.getBasePath();
+                        String absolutePath = stored;
+                        try {
+                            Path p = Paths.get(stored);
+                            if (basePath != null && !p.isAbsolute()) {
+                                absolutePath = Paths.get(basePath).resolve(p).normalize().toString();
+                            } else {
+                                absolutePath = p.toAbsolutePath().normalize().toString();
+                            }
+                        } catch (Exception ignored) {
+                        }
+                        VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(absolutePath);
                         if (virtualFile != null) {
                             OpenFileDescriptor descriptor = new OpenFileDescriptor(project, virtualFile, line - 1, 0);
                             FileEditorManager.getInstance(project).openTextEditor(descriptor, true);

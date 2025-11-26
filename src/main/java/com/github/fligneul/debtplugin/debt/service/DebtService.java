@@ -1,12 +1,18 @@
 package com.github.fligneul.debtplugin.debt.service;
 
+import com.github.fligneul.debtplugin.debt.model.Complexity;
+import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
-import com.github.fligneul.debtplugin.debt.model.Complexity;
-import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.intellij.openapi.components.Service;
@@ -18,6 +24,8 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -118,10 +126,26 @@ public final class DebtService {
         if (f.exists()) {
             try {
                 String content = Files.readString(f.toPath(), StandardCharsets.UTF_8);
-                Type type = new TypeToken<List<DebtItem>>() {}.getType();
+                Type type = new TypeToken<List<DebtItem>>() {
+                }.getType();
                 List<DebtItem> loaded = gson.fromJson(content, type);
                 debts.clear();
-                if (loaded != null) debts.addAll(loaded);
+                boolean changed = false;
+                if (loaded != null) {
+                    String basePath = project.getBasePath();
+                    for (DebtItem d : loaded) {
+                        String original = d.getFile();
+                        String relativized = toProjectRelative(original, basePath);
+                        if (!Objects.equals(original, relativized)) {
+                            d.setFile(relativized);
+                            changed = true;
+                        }
+                        debts.add(d);
+                    }
+                    if (changed) {
+                        saveDebts();
+                    }
+                }
             } catch (IOException ignored) {
             }
         }
@@ -140,6 +164,27 @@ public final class DebtService {
 
     private void refreshHighlighting() {
         DaemonCodeAnalyzer.getInstance(project).restart();
+    }
+
+    private static String toProjectRelative(String anyPath, String basePath) {
+        if (anyPath == null) return "";
+        String norm = anyPath.replace('\\', '/');
+        try {
+            Path p = Paths.get(anyPath);
+            if (basePath != null) {
+                Path base = Paths.get(basePath).toAbsolutePath().normalize();
+                Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : base.resolve(p).normalize();
+                if (abs.startsWith(base)) {
+                    return base.relativize(abs).toString().replace('\\', '/');
+                }
+                return abs.toString().replace('\\', '/');
+            } else {
+                Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : p.normalize();
+                return abs.toString().replace('\\', '/');
+            }
+        } catch (Exception e) {
+            return norm;
+        }
     }
 
     private static final class DebtItemDeserializer implements JsonDeserializer<DebtItem> {

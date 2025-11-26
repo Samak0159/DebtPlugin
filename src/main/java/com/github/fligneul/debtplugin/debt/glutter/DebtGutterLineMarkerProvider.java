@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.Icon;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,12 +50,15 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
 
         if (file.getVirtualFile() == null) return null;
         String osPath = file.getVirtualFile().getPath();
+        String basePath = project.getBasePath();
 
-        String normFilePath = normalizePath(osPath);
+        String currentRel = toProjectRelative(osPath, basePath);
         int lineInFile = lineNumber + 1;
         List<DebtItem> debtsOnLine = new ArrayList<>();
         for (DebtItem d : debtService.all()) {
-            if (normalizePath(d.getFile()).equals(normFilePath) && d.getLine() == lineInFile) {
+            String stored = d.getFile();
+            String storedRel = toProjectRelative(stored, basePath);
+            if (storedRel.equalsIgnoreCase(currentRel) && d.getLine() == lineInFile) {
                 debtsOnLine.add(d);
             }
         }
@@ -121,6 +125,27 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
             return Paths.get(path).toAbsolutePath().normalize().toString().replace('\\', '/').toLowerCase(Locale.getDefault());
         } catch (Exception e) {
             return path.replace('\\', '/').toLowerCase(Locale.getDefault());
+        }
+    }
+
+    private static String toProjectRelative(String anyPath, String basePath) {
+        if (anyPath == null) return "";
+        String norm = anyPath.replace('\\', '/');
+        try {
+            Path p = Paths.get(anyPath);
+            if (basePath != null) {
+                Path base = Paths.get(basePath).toAbsolutePath().normalize();
+                Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : base.resolve(p).normalize();
+                if (abs.startsWith(base)) {
+                    return base.relativize(abs).toString().replace('\\', '/');
+                }
+                return abs.toString().replace('\\', '/');
+            } else {
+                Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : p.normalize();
+                return abs.toString().replace('\\', '/');
+            }
+        } catch (Exception e) {
+            return norm;
         }
     }
 }

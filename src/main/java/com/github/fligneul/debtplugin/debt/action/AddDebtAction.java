@@ -34,8 +34,20 @@ public class AddDebtAction extends AnAction {
             DebtService debtService = project.getService(DebtService.class);
             DebtSettings settings = project.getService(DebtSettings.class);
             String username = settings.getOrInitUsername();
+            String storedPath = file.getPath();
+            String basePath = project.getBasePath();
+            if (basePath != null) {
+                try {
+                    Path abs = Paths.get(storedPath).toAbsolutePath().normalize();
+                    Path base = Paths.get(basePath).toAbsolutePath().normalize();
+                    if (abs.startsWith(base)) {
+                        storedPath = base.relativize(abs).toString().replace('\\', '/');
+                    }
+                } catch (Exception ignored) {
+                }
+            }
             DebtItem debtItem = new DebtItem(
-                    file.getPath(),
+                    storedPath,
                     editor.getCaretModel().getLogicalPosition().line + 1,
                     dialog.getTitleText(),
                     dialog.getDescription(),
