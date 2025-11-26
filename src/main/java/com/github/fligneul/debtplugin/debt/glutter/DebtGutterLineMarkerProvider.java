@@ -1,0 +1,107 @@
+package com.github.fligneul.debtplugin.debt.glutter;
+
+import com.github.fligneul.debtplugin.debt.model.DebtItem;
+import com.github.fligneul.debtplugin.debt.service.DebtService;
+import com.github.fligneul.debtplugin.debt.icons.DebtIcons;
+import com.intellij.codeInsight.daemon.LineMarkerInfo;
+import com.intellij.codeInsight.daemon.LineMarkerProvider;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.markup.GutterIconRenderer;
+import com.intellij.openapi.project.DumbAware;
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiWhiteSpace;
+import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.util.Function;
+import org.jetbrains.annotations.Nullable;
+
+import javax.swing.*;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Collection;
+
+public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAware {
+    @Override
+    public @Nullable LineMarkerInfo<?> getLineMarkerInfo(PsiElement element) {
+        PsiFile file = element.getContainingFile();
+        if (file == null) return null;
+        Document doc = file.getViewProvider().getDocument();
+        if (doc == null) return null;
+        if (element.getTextRange() == null) return null;
+
+        int lineNumber = doc.getLineNumber(element.getTextRange().getStartOffset());
+        int lineStartOffset = doc.getLineStartOffset(lineNumber);
+
+        PsiElement firstAtLine = file.findElementAt(lineStartOffset);
+        if (firstAtLine == null) return null;
+        PsiElement firstNonWs = nextNonWhitespace(firstAtLine);
+        if (firstNonWs == null) return null;
+
+        if (element != firstNonWs) return null;
+
+        Project project = element.getProject();
+        DebtService debtService = project.getService(DebtService.class);
+
+        if (file.getVirtualFile() == null) return null;
+        String osPath = file.getVirtualFile().getPath();
+
+        String normFilePath = normalizePath(osPath);
+        int lineInFile = lineNumber + 1;
+        List<DebtItem> debtsOnLine = new ArrayList<>();
+        for (DebtItem d : debtService.all()) {
+            if (normalizePath(d.getFile()).equals(normFilePath) && d.getLine() == lineInFile) {
+                debtsOnLine.add(d);
+            }
+        }
+        if (debtsOnLine.isEmpty()) return null;
+
+        Icon icon = DebtIcons.TECHNICAL_DEBT;
+        Function<PsiElement, String> tooltipProvider = psi -> {
+            if (debtsOnLine.size() == 1) {
+                DebtItem d = debtsOnLine.get(0);
+                return "Debt: " + d.getDescription() + " [" + d.getStatus() + ", " + d.getPriority() + "]";
+            } else {
+                StringBuilder sb = new StringBuilder();
+                sb.append("Debts (").append(debtsOnLine.size()).append("):\n");
+                for (DebtItem it : debtsOnLine) {
+                    sb.append("- ").append(it.getDescription()).append(" [").append(it.getStatus()).append(", ").append(it.getPriority()).append("]\n");
+                }
+                return sb.toString();
+            }
+        };
+
+        return new LineMarkerInfo<>(
+                element,
+                firstNonWs.getTextRange(),
+                icon,
+                tooltipProvider,
+                (evt, el) -> {},
+                GutterIconRenderer.Alignment.LEFT,
+                () -> "Debt"
+        );
+    }
+
+    private static @Nullable PsiElement nextNonWhitespace(@Nullable PsiElement start) {
+        PsiElement el = start;
+        while (el instanceof PsiWhiteSpace) {
+            el = PsiTreeUtil.nextLeaf(el, true);
+        }
+        if (el instanceof PsiWhiteSpace) return null;
+        return el;
+    }
+
+    public void collectSlowLineMarkers(List<? extends PsiElement> elements, Collection<? super LineMarkerInfo<?>> result) {
+        // Not used
+    }
+
+    private static String normalizePath(String path) {
+        try {
+            return Paths.get(path).toAbsolutePath().normalize().toString().replace('\\', '/').toLowerCase(Locale.getDefault());
+        } catch (Exception e) {
+            return path.replace('\\', '/').toLowerCase(Locale.getDefault());
+        }
+    }
+}

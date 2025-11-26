@@ -10,18 +10,18 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="Technical Debt" anchor="bottom" icon="/icons/technicalDebt.svg" factoryClass="com.github.fligneul.debtplugin.debt.DebtToolWindowFactory"/>
+        <toolWindow id="Technical Debt" anchor="bottom" icon="/icons/technicalDebt.svg" factoryClass="com.github.fligneul.debtplugin.debt.toolwindow.DebtToolWindowFactory"/>
         <projectConfigurable
                 parentId="tools"
-                instance="com.github.fligneul.debtplugin.settings.DebtSettingsConfigurable"
-                id="com.github.fligneul.debtplugin.settings.DebtSettingsConfigurable"
+                instance="com.github.fligneul.debtplugin.debt.settings.DebtSettingsConfigurable"
+                id="com.github.fligneul.debtplugin.debt.settings.DebtSettingsConfigurable"
                 displayName="Debt Plugin"/>
-        <codeInsight.lineMarkerProvider implementationClass="com.github.fligneul.debtplugin.debt.DebtGutterLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider implementationClass="com.github.fligneul.debtplugin.debt.glutter.DebtGutterLineMarkerProvider"/>
     </extensions>
 
     <actions>
-        <action id="com.github.fligneul.debtplugin.debt.AddDebtAction"
-                class="com.github.fligneul.debtplugin.debt.AddDebtAction"
+        <action id="com.github.fligneul.debtplugin.debt.action.AddDebtAction"
+                class="com.github.fligneul.debtplugin.debt.action.AddDebtAction"
                 text="Add Debt"
                 description="Add a new debt to the project."
                 icon="AllIcons.General.Add">
