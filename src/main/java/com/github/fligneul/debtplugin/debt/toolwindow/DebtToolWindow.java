@@ -16,12 +16,17 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
 import com.intellij.util.containers.OrderedSet;
+import com.intellij.openapi.fileChooser.FileChooserFactory;
+import com.intellij.openapi.fileChooser.FileSaverDescriptor;
+import com.intellij.openapi.fileChooser.FileSaverDialog;
+import com.intellij.openapi.ui.Messages;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JFileChooser;
 import javax.swing.JPopupMenu;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -30,12 +35,17 @@ import javax.swing.RowFilter;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -48,6 +58,12 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class DebtToolWindow {
     private final Project project;
@@ -255,9 +271,15 @@ public class DebtToolWindow {
             }
         });
 
+        // Bottom buttons panel
+        JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> updateTable());
-        panel.add(refreshButton, BorderLayout.SOUTH);
+        JButton exportButton = new JButton("Export XLSX");
+        exportButton.addActionListener(e -> exportAllDebtItemsToXlsx());
+        bottomButtons.add(exportButton);
+        bottomButtons.add(refreshButton);
+        panel.add(bottomButtons, BorderLayout.SOUTH);
 
         updateTable();
         return panel;
@@ -320,5 +342,92 @@ public class DebtToolWindow {
         wantedLevelFilter.setOptions(wantedLevels);
 
         applyFilters();
+    }
+
+    private void exportAllDebtItemsToXlsx() {
+        List<DebtItem> items = new ArrayList<>(debtService.all());
+
+        JFileChooser chooser = new JFileChooser(project.getBasePath());
+        chooser.setDialogTitle("Export Debt Items to XLSX");
+        chooser.setFileFilter(new FileNameExtensionFilter("Excel Workbook (*.xlsx)", "xlsx"));
+        chooser.setSelectedFile(new File("debt-items.xlsx"));
+
+        int res = chooser.showSaveDialog(SwingUtilities.getWindowAncestor(table));
+        if (res != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File selected = chooser.getSelectedFile();
+        if (selected == null) return;
+        if (!selected.getName().toLowerCase().endsWith(".xlsx")) {
+            selected = new File(selected.getParentFile(), selected.getName() + ".xlsx");
+        }
+
+        if (selected.exists()) {
+            int answer = Messages.showYesNoDialog(
+                    project,
+                    "File already exists. Do you want to overwrite it?\n" + selected.getAbsolutePath(),
+                    "Overwrite File?",
+                    null
+            );
+            if (answer != Messages.YES) {
+                return;
+            }
+        }
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Debt Items");
+
+            // Header row
+            String[] headers = new String[] {
+                    "File", "Line", "Title", "Description", "User", "WantedLevel",
+                    "Complexity", "Status", "Priority", "Risk", "TargetVersion", "Comment", "CurrentModule"
+            };
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue(headers[i]);
+            }
+
+            // Data rows
+            int rowIdx = 1;
+            for (DebtItem it : items) {
+                Row row = sheet.createRow(rowIdx++);
+                int c = 0;
+                row.createCell(c++).setCellValue(it.getFile());
+                row.createCell(c++).setCellValue(it.getLine());
+                row.createCell(c++).setCellValue(it.getTitle());
+                row.createCell(c++).setCellValue(it.getDescription());
+                row.createCell(c++).setCellValue(it.getUsername());
+                row.createCell(c++).setCellValue(it.getWantedLevel());
+                row.createCell(c++).setCellValue(String.valueOf(it.getComplexity()));
+                row.createCell(c++).setCellValue(String.valueOf(it.getStatus()));
+                row.createCell(c++).setCellValue(String.valueOf(it.getPriority()));
+                row.createCell(c++).setCellValue(String.valueOf(it.getRisk()));
+                row.createCell(c++).setCellValue(it.getTargetVersion());
+                row.createCell(c++).setCellValue(it.getComment());
+                row.createCell(c).setCellValue(it.getCurrentModule());
+            }
+
+            // Autosize
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            // Ensure parent dir exists
+            File parent = selected.getParentFile();
+            if (parent != null && !parent.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                parent.mkdirs();
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(selected)) {
+                workbook.write(fos);
+            }
+
+            Messages.showInfoMessage(project, "Exported " + items.size() + " item(s) to:\n" + selected.getAbsolutePath(), "Export Successful");
+        } catch (Exception ex) {
+            Messages.showErrorDialog(project, "Failed to export XLSX:\n" + ex.getMessage(), "Export Failed");
+        }
     }
 }
