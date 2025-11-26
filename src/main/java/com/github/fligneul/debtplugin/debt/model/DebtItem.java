@@ -17,6 +17,8 @@ public class DebtItem {
     private Risk risk;
     private String targetVersion;
     private String comment;
+    // Maven current module identifier (groupId:artifactId). Empty when unknown.
+    private String currentModule;
 
     // No-args constructor for serializers (e.g., Gson)
     public DebtItem() {
@@ -32,6 +34,7 @@ public class DebtItem {
         this.risk = Risk.Medium;
         this.targetVersion = "";
         this.comment = "";
+        this.currentModule = "";
     }
 
     public DebtItem(
@@ -98,6 +101,9 @@ public class DebtItem {
     @NotNull public String getComment() { return comment; }
     public void setComment(@NotNull String comment) { this.comment = comment; }
 
+    @NotNull public String getCurrentModule() { return currentModule; }
+    public void setCurrentModule(@NotNull String moduleParent) { this.currentModule = moduleParent; }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -107,12 +113,13 @@ public class DebtItem {
                 Objects.equals(file, debtItem.file) && Objects.equals(title, debtItem.title) &&
                 Objects.equals(description, debtItem.description) && Objects.equals(username, debtItem.username) &&
                 complexity == debtItem.complexity && status == debtItem.status && priority == debtItem.priority &&
-                risk == debtItem.risk && Objects.equals(targetVersion, debtItem.targetVersion) && Objects.equals(comment, debtItem.comment);
+                risk == debtItem.risk && Objects.equals(targetVersion, debtItem.targetVersion) && Objects.equals(comment, debtItem.comment)
+                && Objects.equals(currentModule, debtItem.currentModule);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment);
+        return Objects.hash(file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, currentModule);
     }
 
     @Override
@@ -130,6 +137,7 @@ public class DebtItem {
                 ", risk=" + risk +
                 ", targetVersion='" + targetVersion + '\'' +
                 ", comment='" + comment + '\'' +
+                ", currentModule='" + currentModule + '\'' +
                 '}';
     }
 }

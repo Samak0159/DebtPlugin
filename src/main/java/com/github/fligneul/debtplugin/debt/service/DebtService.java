@@ -88,7 +88,7 @@ public final class DebtService {
         for (int i = 0; i < debts.size(); i++) {
             DebtItem d = debts.get(i);
             if (oldUsername.equals(d.getUsername())) {
-                debts.set(i, new DebtItem(
+                DebtItem updated = new DebtItem(
                         d.getFile(),
                         d.getLine(),
                         d.getTitle(),
@@ -101,7 +101,9 @@ public final class DebtService {
                         d.getRisk(),
                         d.getTargetVersion(),
                         d.getComment()
-                ));
+                );
+                updated.setCurrentModule(d.getCurrentModule());
+                debts.set(i, updated);
                 changed = true;
             }
         }
@@ -159,7 +161,7 @@ public final class DebtService {
             String targetVersion = getAsString(obj, "targetVersion", "");
             String comment = getAsString(obj, "comment", "");
 
-            return new DebtItem(
+            DebtItem item = new DebtItem(
                     file,
                     line,
                     title,
@@ -173,6 +175,13 @@ public final class DebtService {
                     targetVersion,
                     comment
             );
+            // Optional, backward-compatible: prefer currentModule, fallback to legacy moduleParent
+            String currentModule = getAsString(obj, "currentModule", null);
+            if (currentModule == null || currentModule.isBlank()) {
+                currentModule = getAsString(obj, "moduleParent", "");
+            }
+            if (currentModule != null) item.setCurrentModule(currentModule);
+            return item;
         }
 
         private static String getAsString(JsonObject obj, String key, String def) {

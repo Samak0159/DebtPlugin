@@ -184,6 +184,11 @@ public class DebtTableModel extends DefaultTableModel {
             default -> updatedDebtItem = oldDebtItem;
         }
 
+        // Preserve non-editable metadata
+        if (updatedDebtItem != oldDebtItem) {
+            updatedDebtItem.setCurrentModule(oldDebtItem.getCurrentModule());
+        }
+
         if (!updatedDebtItem.equals(oldDebtItem)) {
             debtItems.set(row, updatedDebtItem);
             debtService.update(oldDebtItem, updatedDebtItem);
