@@ -20,7 +20,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
     public static final Topic<DebtSettingsListener> TOPIC = Topic.create("Debt Settings Changed", DebtSettingsListener.class);
 
     public static final class State {
-        public String debtFilePath = "debt.json";
+        public String debtFilePath = "dev/debt.json";
         public String username = "";
 
         public State() {}
