@@ -8,6 +8,7 @@ import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettingsListener;
+import com.github.fligneul.debtplugin.debt.action.AddDebtDialog;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
@@ -20,6 +21,10 @@ import com.intellij.openapi.fileChooser.FileChooserFactory;
 import com.intellij.openapi.fileChooser.FileSaverDescriptor;
 import com.intellij.openapi.fileChooser.FileSaverDialog;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.icons.AllIcons;
+import java.util.function.IntConsumer;
+import java.awt.Component;
+import java.awt.Point;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultCellEditor;
@@ -119,27 +124,48 @@ public class DebtToolWindow {
         table.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(riskComboBox));
 
 
-        // Delete button column is at index 12
+        // Action buttons (Edit + Delete) column is at index 12
         TableColumn actionCol = table.getColumnModel().getColumn(12);
-        actionCol.setCellRenderer(new DeleteButtonCell(viewRow -> {
+        ActionButtonsCell actionButtons = new ActionButtonsCell(viewRow -> {
+            int modelRow = table.convertRowIndexToModel(viewRow);
+            if (modelRow >= 0 && modelRow < tableModel.debtItems.size()) {
+                DebtItem oldItem = tableModel.debtItems.get(modelRow);
+                // Open dialog pre-filled with selected item
+                AddDebtDialog dialog = new AddDebtDialog(oldItem);
+                if (dialog.showAndGet()) {
+                    DebtItem newItem = new DebtItem(
+                            oldItem.getFile(),
+                            oldItem.getLine(),
+                            dialog.getTitleText(),
+                            dialog.getDescription(),
+                            oldItem.getUsername(),
+                            dialog.getWantedLevel(),
+                            dialog.getComplexity(),
+                            dialog.getStatus(),
+                            dialog.getPriority(),
+                            dialog.getRisk(),
+                            dialog.getTargetVersion(),
+                            dialog.getComment()
+                    );
+                    newItem.setCurrentModule(oldItem.getCurrentModule());
+                    debtService.update(oldItem, newItem);
+                    updateTable();
+                }
+            }
+        }, viewRow -> {
             int modelRow = table.convertRowIndexToModel(viewRow);
             if (modelRow >= 0 && modelRow < tableModel.debtItems.size()) {
                 DebtItem debtItem = tableModel.debtItems.get(modelRow);
                 debtService.remove(debtItem);
                 updateTable();
             }
-        }));
-        actionCol.setCellEditor(new DeleteButtonCell(viewRow -> {
-            int modelRow = table.convertRowIndexToModel(viewRow);
-            if (modelRow >= 0 && modelRow < tableModel.debtItems.size()) {
-                DebtItem debtItem = tableModel.debtItems.get(modelRow);
-                debtService.remove(debtItem);
-                updateTable();
-            }
-        }));
-        actionCol.setPreferredWidth(30);
-        actionCol.setMaxWidth(30);
-        actionCol.setMinWidth(30);
+        });
+        actionCol.setCellRenderer(actionButtons);
+        actionCol.setCellEditor(actionButtons);
+        // Keep action column moderately narrow; rely on compact layout inside the cell
+        actionCol.setPreferredWidth(52);
+        actionCol.setMaxWidth(60);
+        actionCol.setMinWidth(44);
 
         // Refresh the table automatically when settings change (e.g., username updated)
         project.getMessageBus().connect().subscribe(DebtSettings.TOPIC, new DebtSettingsListener() {

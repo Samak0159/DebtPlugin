@@ -4,6 +4,7 @@ import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
+import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.components.JBTextField;
@@ -44,6 +45,32 @@ public class AddDebtDialog extends DialogWrapper {
         super(true);
         setTitle("Add New Debt");
         init();
+    }
+
+    public AddDebtDialog(DebtItem item) {
+        super(true);
+        setTitle("Edit Debt");
+        // Pre-fill backing fields so getters have values even if user doesn't change inputs
+        this.titleText = item.getTitle();
+        this.description = item.getDescription();
+        this.comment = item.getComment();
+        this.wantedLevel = item.getWantedLevel();
+        this.complexity = item.getComplexity();
+        this.status = item.getStatus();
+        this.priority = item.getPriority();
+        this.risk = item.getRisk();
+        this.targetVersion = item.getTargetVersion();
+        init();
+        // After components are created in init(), push values into UI controls
+        titleField.setText(item.getTitle());
+        descriptionArea.setText(item.getDescription());
+        commentArea.setText(item.getComment());
+        wantedLevelSpinner.setValue(item.getWantedLevel());
+        complexityComboBox.setSelectedItem(item.getComplexity());
+        statusComboBox.setSelectedItem(item.getStatus());
+        priorityComboBox.setSelectedItem(item.getPriority());
+        riskComboBox.setSelectedItem(item.getRisk());
+        targetVersionField.setText(item.getTargetVersion());
     }
 
     @Override
