@@ -33,6 +33,16 @@ public class AddDebtDialog extends DialogWrapper {
     private final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
     private final JBTextField targetVersionField = new JBTextField();
 
+    // Row panels to allow toggling visibility
+    private JPanel statusRow;
+    private JPanel priorityRow;
+    private JPanel riskRow;
+    private JPanel targetVersionRow;
+    private JPanel commentRow;
+
+    // Whether the dialog is used to edit an existing item (true) or add a new one (false)
+    private boolean isEdit = false;
+
     private String titleText = "";
     private String description = "";
     private String comment = "";
@@ -47,12 +57,20 @@ public class AddDebtDialog extends DialogWrapper {
     public AddDebtDialog() {
         super(true);
         setTitle("Add New Debt");
+        this.isEdit = false;
         init();
+        // Ensure hidden fields still have intended default values when saving
+        statusComboBox.setSelectedItem(this.status);
+        priorityComboBox.setSelectedItem(this.priority);
+        riskComboBox.setSelectedItem(this.risk);
+        targetVersionField.setText(this.targetVersion);
+        commentArea.setText(this.comment);
     }
 
     public AddDebtDialog(DebtItem item) {
         super(true);
         setTitle("Edit Debt");
+        this.isEdit = true;
         // Pre-fill backing fields so getters have values even if user doesn't change inputs
         this.titleText = item.getTitle();
         this.description = item.getDescription();
@@ -81,20 +99,40 @@ public class AddDebtDialog extends DialogWrapper {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.add(labeled("Title:", titleField));
+
         JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
         panel.add(labeled("Description:", descriptionScroll));
+
         JScrollPane commentScroll = new JScrollPane(commentArea);
         commentArea.setLineWrap(true);
         commentArea.setWrapStyleWord(true);
+
         panel.add(labeled("Wanted Level (1-5):", wantedLevelSpinner));
         panel.add(labeled("Complexity:", complexityComboBox));
-        panel.add(labeled("Status:", statusComboBox));
-        panel.add(labeled("Priority:", priorityComboBox));
-        panel.add(labeled("Risk:", riskComboBox));
-        panel.add(labeled("Target Version:", targetVersionField));
-        panel.add(labeled("Comment:", commentScroll));
+
+        // Rows whose visibility depends on add vs edit mode
+        statusRow = labeled("Status:", statusComboBox);
+        priorityRow = labeled("Priority:", priorityComboBox);
+        riskRow = labeled("Risk:", riskComboBox);
+        targetVersionRow = labeled("Target Version:", targetVersionField);
+        commentRow = labeled("Comment:", commentScroll);
+
+        // Hide them when adding (isEdit == false); still keeps component values for saving
+        boolean showAdvanced = isEdit;
+        statusRow.setVisible(showAdvanced);
+        priorityRow.setVisible(showAdvanced);
+        riskRow.setVisible(showAdvanced);
+        targetVersionRow.setVisible(showAdvanced);
+        commentRow.setVisible(showAdvanced);
+
+        panel.add(statusRow);
+        panel.add(priorityRow);
+        panel.add(riskRow);
+        panel.add(targetVersionRow);
+        panel.add(commentRow);
+
         return panel;
     }
 
