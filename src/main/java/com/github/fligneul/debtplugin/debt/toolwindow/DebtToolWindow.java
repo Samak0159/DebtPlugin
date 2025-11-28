@@ -38,6 +38,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.RowFilter;
 import javax.swing.SwingUtilities;
+import javax.swing.JTabbedPane;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -57,7 +58,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -76,8 +79,12 @@ public class DebtToolWindow {
     private final DebtTableModel tableModel;
     private final JBTable table;
     private final TableRowSorter<DebtTableModel> sorter;
+    private final ModulePieChartPanel pieChartPanel;
 
-    // Filter inputs
+    // Cached items for reuse (table and chart)
+    private final List<DebtItem> allItems = new ArrayList<>();
+
+    // Filter inputs (table tab)
     private final JTextField fileFilter = new JTextField(8);
     private final JTextField titleFilter = new JTextField(8);
     private final JTextField descFilter = new JTextField(8);
@@ -90,11 +97,29 @@ public class DebtToolWindow {
     private final JTextField targetVersionFilter = new JTextField(6);
     private final JTextField commentFilter = new JTextField(8);
 
+    // Filter inputs (chart tab)
+    private final JTextField fileFilterChart = new JTextField(8);
+    private final JTextField titleFilterChart = new JTextField(8);
+    private final JTextField descFilterChart = new JTextField(8);
+    private final JTextField userFilterChart = new JTextField(6);
+    private final MultiSelectFilter<Integer> wantedLevelFilterChart = new MultiSelectFilter<>("WantedLevel");
+    private final MultiSelectFilter<Complexity> complexityFilterChart = new MultiSelectFilter<>("Complexity");
+    private final MultiSelectFilter<Status> statusFilterChart = new MultiSelectFilter<>("Status");
+    private final MultiSelectFilter<Priority> priorityFilterChart = new MultiSelectFilter<>("Priority");
+    private final MultiSelectFilter<Risk> riskFilterChart = new MultiSelectFilter<>("Risk");
+    private final JTextField targetVersionFilterChart = new JTextField(6);
+    private final JTextField commentFilterChart = new JTextField(8);
+
     // UI elements for filters layout
     private JPanel row2Panel;
     private JPanel row3Panel;
     private JButton toggleFiltersButton;
     private boolean filtersCollapsed = false;
+
+    private JPanel row2PanelChart;
+    private JPanel row3PanelChart;
+    private JButton toggleFiltersButtonChart;
+    private boolean filtersCollapsedChart = false;
 
     public DebtToolWindow(Project project) {
         this.project = project;
@@ -103,12 +128,19 @@ public class DebtToolWindow {
         this.table = new JBTable(tableModel);
         this.sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
+        this.pieChartPanel = new ModulePieChartPanel();
 
         // Configure multi-select enum filters
         complexityFilter.setOptions(Arrays.asList(Complexity.values()));
         statusFilter.setOptions(Arrays.asList(Status.values()));
         priorityFilter.setOptions(Arrays.asList(Priority.values()));
         riskFilter.setOptions(Arrays.asList(Risk.values()));
+
+        // Configure chart tab enum filters as well
+        complexityFilterChart.setOptions(Arrays.asList(Complexity.values()));
+        statusFilterChart.setOptions(Arrays.asList(Status.values()));
+        priorityFilterChart.setOptions(Arrays.asList(Priority.values()));
+        riskFilterChart.setOptions(Arrays.asList(Risk.values()));
 
         JComboBox<Complexity> complexityComboBox = new JComboBox<>(Complexity.values());
         TableColumn col6 = table.getColumnModel().getColumn(6);
@@ -179,9 +211,14 @@ public class DebtToolWindow {
         VirtualFile debtFile = LocalFileSystem.getInstance().findFileByIoFile(debtService.getDebtFile());
     }
 
+    public void refresh() {
+        updateTable();
+    }
+
     public JPanel getContent() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.add(new JBScrollPane(table), BorderLayout.CENTER);
+        // Build the existing list UI into its own panel
+        JPanel listPanel = new JPanel(new BorderLayout());
+        listPanel.add(new JBScrollPane(table), BorderLayout.CENTER);
 
         // Filters bar at the top
         JPanel filters = new JPanel();
@@ -234,7 +271,7 @@ public class DebtToolWindow {
         filters.add(row1);
         filters.add(row2Panel);
         filters.add(row3Panel);
-        panel.add(filters, BorderLayout.NORTH);
+        listPanel.add(filters, BorderLayout.NORTH);
 
         // Wire filter listeners
         DocumentListener docListener = new DocumentListener() {
@@ -297,18 +334,99 @@ public class DebtToolWindow {
             }
         });
 
-        // Bottom buttons panel
+        // Bottom buttons panel (export only; refresh moved to toolwindow title bar)
         JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton refreshButton = new JButton("Refresh");
-        refreshButton.addActionListener(e -> updateTable());
         JButton exportButton = new JButton("Export XLSX");
         exportButton.addActionListener(e -> exportAllDebtItemsToXlsx());
         bottomButtons.add(exportButton);
-        bottomButtons.add(refreshButton);
-        panel.add(bottomButtons, BorderLayout.SOUTH);
+        listPanel.add(bottomButtons, BorderLayout.SOUTH);
+
+        // Build the chart tab with its own filters
+        JPanel chartPanel = new JPanel(new BorderLayout());
+
+        JPanel chartFilters = new JPanel();
+        chartFilters.setLayout(new BoxLayout(chartFilters, BoxLayout.Y_AXIS));
+
+        JPanel row1Chart = new JPanel(new BorderLayout(8, 2));
+        row1Chart.add(new JLabel("Filter :"), BorderLayout.WEST);
+        toggleFiltersButtonChart = new JButton("-");
+        toggleFiltersButtonChart.addActionListener(e -> {
+            filtersCollapsedChart = !filtersCollapsedChart;
+            if (row2PanelChart != null) row2PanelChart.setVisible(!filtersCollapsedChart);
+            if (row3PanelChart != null) row3PanelChart.setVisible(!filtersCollapsedChart);
+            toggleFiltersButtonChart.setText(filtersCollapsedChart ? "+" : "-");
+            chartFilters.revalidate();
+            chartFilters.repaint();
+        });
+        row1Chart.add(toggleFiltersButtonChart, BorderLayout.EAST);
+
+        row2PanelChart = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        row2PanelChart.add(new JLabel("File:"));
+        row2PanelChart.add(fileFilterChart);
+        row2PanelChart.add(new JLabel("Title:"));
+        row2PanelChart.add(titleFilterChart);
+        row2PanelChart.add(new JLabel("Description:"));
+        row2PanelChart.add(descFilterChart);
+        row2PanelChart.add(new JLabel("User:"));
+        row2PanelChart.add(userFilterChart);
+        row2PanelChart.add(new JLabel("TargetVersion:"));
+        row2PanelChart.add(targetVersionFilterChart);
+        row2PanelChart.add(new JLabel("Comment:"));
+        row2PanelChart.add(commentFilterChart);
+
+        row3PanelChart = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        row3PanelChart.add(new JLabel("WantedLevel:"));
+        row3PanelChart.add(wantedLevelFilterChart);
+        row3PanelChart.add(new JLabel("Complexity:"));
+        row3PanelChart.add(complexityFilterChart);
+        row3PanelChart.add(new JLabel("Status:"));
+        row3PanelChart.add(statusFilterChart);
+        row3PanelChart.add(new JLabel("Priority:"));
+        row3PanelChart.add(priorityFilterChart);
+        row3PanelChart.add(new JLabel("Risk:"));
+        row3PanelChart.add(riskFilterChart);
+
+        // Initial visibility
+        row2PanelChart.setVisible(!filtersCollapsedChart);
+        row3PanelChart.setVisible(!filtersCollapsedChart);
+        toggleFiltersButtonChart.setText(filtersCollapsedChart ? "+" : "-");
+
+        chartFilters.add(row1Chart);
+        chartFilters.add(row2PanelChart);
+        chartFilters.add(row3PanelChart);
+        chartPanel.add(chartFilters, BorderLayout.NORTH);
+
+        // Wire chart filter listeners
+        DocumentListener docListenerChart = new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { updateChart(); }
+            @Override public void removeUpdate(DocumentEvent e) { updateChart(); }
+            @Override public void changedUpdate(DocumentEvent e) { updateChart(); }
+        };
+        fileFilterChart.getDocument().addDocumentListener(docListenerChart);
+        titleFilterChart.getDocument().addDocumentListener(docListenerChart);
+        descFilterChart.getDocument().addDocumentListener(docListenerChart);
+        userFilterChart.getDocument().addDocumentListener(docListenerChart);
+        targetVersionFilterChart.getDocument().addDocumentListener(docListenerChart);
+        commentFilterChart.getDocument().addDocumentListener(docListenerChart);
+
+        wantedLevelFilterChart.addSelectionListener(this::updateChart);
+        complexityFilterChart.addSelectionListener(this::updateChart);
+        statusFilterChart.addSelectionListener(this::updateChart);
+        priorityFilterChart.addSelectionListener(this::updateChart);
+        riskFilterChart.addSelectionListener(this::updateChart);
+
+        chartPanel.add(new JBScrollPane(pieChartPanel), BorderLayout.CENTER);
+
+        // Root with tabs
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("debts", listPanel);
+        tabs.addTab("modules", chartPanel);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.add(tabs, BorderLayout.CENTER);
 
         updateTable();
-        return panel;
+        return root;
     }
 
     private void applyFilters() {
@@ -357,17 +475,69 @@ public class DebtToolWindow {
 
     private void updateTable() {
         tableModel.clearAll();
+        allItems.clear();
 
         final TreeSet<Integer> wantedLevels = new TreeSet<>(Comparator.naturalOrder());
 
         for (DebtItem item : debtService.all()) {
             tableModel.addDebtItem(item);
+            allItems.add(item);
             wantedLevels.add(item.getWantedLevel());
         }
 
+        // Populate wanted level options for both tabs
         wantedLevelFilter.setOptions(wantedLevels);
+        wantedLevelFilterChart.setOptions(wantedLevels);
 
+        // Apply filters to table and update chart aggregation
         applyFilters();
+        updateChart();
+    }
+
+    private void updateChart() {
+        // Aggregate modules from items that match the chart-specific filters
+        final LinkedHashMap<String, Integer> byModule = new LinkedHashMap<>();
+        for (DebtItem it : allItems) {
+            if (!matchesChart(it)) continue;
+            String module = it.getCurrentModule();
+            if (module == null || module.isBlank()) module = "Unknown";
+            byModule.put(module, byModule.getOrDefault(module, 0) + 1);
+        }
+        pieChartPanel.setData(byModule);
+    }
+
+    private boolean matchesChart(DebtItem it) {
+        // Text fields (contains, case-insensitive)
+        String fileNeedle = fileFilterChart.getText();
+        if (!(containsIgnoreCase(it.getFile(), fileNeedle) || containsIgnoreCase(getBaseName(it.getFile()), fileNeedle))) return false; // match path or base name
+        if (!containsIgnoreCase(it.getTitle(), titleFilterChart.getText())) return false;
+        if (!containsIgnoreCase(it.getDescription(), descFilterChart.getText())) return false;
+        if (!containsIgnoreCase(it.getUsername(), userFilterChart.getText())) return false;
+        if (!containsIgnoreCase(it.getTargetVersion(), targetVersionFilterChart.getText())) return false;
+        if (!containsIgnoreCase(it.getComment(), commentFilterChart.getText())) return false;
+
+        // Multi-select exact matches when any selected
+        if (!wantedLevelFilterChart.getSelected().isEmpty() && !wantedLevelFilterChart.getSelected().contains(it.getWantedLevel())) return false;
+        if (!complexityFilterChart.getSelected().isEmpty() && !complexityFilterChart.getSelected().contains(it.getComplexity())) return false;
+        if (!statusFilterChart.getSelected().isEmpty() && !statusFilterChart.getSelected().contains(it.getStatus())) return false;
+        if (!priorityFilterChart.getSelected().isEmpty() && !priorityFilterChart.getSelected().contains(it.getPriority())) return false;
+        if (!riskFilterChart.getSelected().isEmpty() && !riskFilterChart.getSelected().contains(it.getRisk())) return false;
+
+        return true;
+    }
+
+    private boolean containsIgnoreCase(String haystack, String needle) {
+        if (needle == null || needle.isBlank()) return true;
+        String n = needle.trim().toLowerCase();
+        String h = haystack == null ? "" : haystack.toLowerCase();
+        return h.contains(n);
+    }
+
+    private String getBaseName(String path) {
+        if (path == null) return "";
+        String p = path.replace('\\', '/');
+        int idx = p.lastIndexOf('/');
+        return idx >= 0 ? p.substring(idx + 1) : p;
     }
 
     private void exportAllDebtItemsToXlsx() {
