@@ -19,6 +19,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
+import java.awt.Dimension;
 
 public class AddDebtDialog extends DialogWrapper {
     private final JBTextField titleField = new JBTextField();
@@ -40,6 +42,7 @@ public class AddDebtDialog extends DialogWrapper {
     private Priority priority = Priority.Medium;
     private Risk risk = Risk.Medium;
     private String targetVersion = "";
+    private static final int LABEL_COL_WIDTH = 160;
 
     public AddDebtDialog() {
         super(true);
@@ -98,7 +101,22 @@ public class AddDebtDialog extends DialogWrapper {
     private static JPanel labeled(String label, JComponent comp) {
         JPanel row = new JPanel();
         row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
-        row.add(new JLabel(label));
+
+        JLabel jLabel = new JLabel(label);
+        jLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        // Fix the label column width so all fields align nicely
+        Dimension labelSize = jLabel.getPreferredSize();
+        labelSize = new Dimension(LABEL_COL_WIDTH, labelSize.height);
+        jLabel.setPreferredSize(labelSize);
+        jLabel.setMinimumSize(labelSize);
+        jLabel.setMaximumSize(new Dimension(LABEL_COL_WIDTH, Integer.MAX_VALUE));
+
+        // Let input control stretch to fill remaining width
+        Dimension compPref = comp.getPreferredSize();
+        comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, compPref != null ? compPref.height : Integer.MAX_VALUE));
+        comp.setAlignmentX(0f);
+
+        row.add(jLabel);
         row.add(Box.createHorizontalStrut(8));
         row.add(comp);
         return row;
