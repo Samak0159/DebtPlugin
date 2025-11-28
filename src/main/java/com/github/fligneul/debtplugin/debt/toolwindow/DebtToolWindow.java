@@ -14,6 +14,7 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
 import com.intellij.util.containers.OrderedSet;
@@ -74,6 +75,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class DebtToolWindow {
+    private static final Logger LOG = Logger.getInstance(DebtToolWindow.class);
     private final Project project;
     private final DebtService debtService;
     private final DebtTableModel tableModel;
@@ -130,6 +132,9 @@ public class DebtToolWindow {
         table.setRowSorter(sorter);
         this.pieChartPanel = new ModulePieChartPanel();
 
+        int initialCount = debtService.all().size();
+        LOG.info("DebtToolWindow initialized. initialCount=" + initialCount + " debtFile=" + debtService.getDebtFile().getAbsolutePath());
+
         // Configure multi-select enum filters
         complexityFilter.setOptions(Arrays.asList(Complexity.values()));
         statusFilter.setOptions(Arrays.asList(Status.values()));
@@ -180,14 +185,24 @@ public class DebtToolWindow {
                             dialog.getComment()
                     );
                     newItem.setCurrentModule(oldItem.getCurrentModule());
+                    LOG.info("Edit confirmed: file=" + newItem.getFile() + ":" + newItem.getLine() +
+                            " title=\"" + oldItem.getTitle() + "\" -> \"" + newItem.getTitle() + "\"" +
+                            " desc=\"" + oldItem.getDescription() + "\" -> \"" + newItem.getDescription() + "\"" +
+                            " user=" + newItem.getUsername() +
+                            " targetVersion=\"" + oldItem.getTargetVersion() + "\" -> \"" + newItem.getTargetVersion() + "\"" +
+                            " comment=\"" + oldItem.getComment() + "\" -> \"" + newItem.getComment() + "\"");
                     debtService.update(oldItem, newItem);
                     updateTable();
+                } else {
+                    if (LOG.isDebugEnabled()) LOG.debug("Edit dialog canceled for file=" + oldItem.getFile() + ":" + oldItem.getLine());
                 }
             }
         }, viewRow -> {
             int modelRow = table.convertRowIndexToModel(viewRow);
             if (modelRow >= 0 && modelRow < tableModel.debtItems.size()) {
                 DebtItem debtItem = tableModel.debtItems.get(modelRow);
+                LOG.info("Delete confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
+                        " title=\"" + debtItem.getTitle() + "\" user=" + debtItem.getUsername());
                 debtService.remove(debtItem);
                 updateTable();
             }
@@ -203,6 +218,7 @@ public class DebtToolWindow {
         project.getMessageBus().connect().subscribe(DebtSettings.TOPIC, new DebtSettingsListener() {
             @Override
             public void settingsChanged(DebtSettings.State settings) {
+                LOG.info("Settings changed: username=" + settings.getUsername() + " relDebtPath=" + settings.getDebtFilePath());
                 updateTable();
             }
         });
@@ -212,6 +228,7 @@ public class DebtToolWindow {
     }
 
     public void refresh() {
+        if (LOG.isDebugEnabled()) LOG.debug("Refresh requested from toolwindow");
         updateTable();
     }
 
@@ -322,12 +339,16 @@ public class DebtToolWindow {
                             } else {
                                 absolutePath = p.toAbsolutePath().normalize().toString();
                             }
-                        } catch (Exception ignored) {
+                        } catch (Exception ex) {
+                            if (LOG.isDebugEnabled()) LOG.debug("Failed to resolve path for navigation. stored=" + stored + " basePath=" + basePath + " msg=" + ex.getMessage(), ex);
                         }
+                        if (LOG.isDebugEnabled()) LOG.debug("Navigate request: stored=" + stored + " resolved=" + absolutePath + ":" + line);
                         VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(absolutePath);
                         if (virtualFile != null) {
                             OpenFileDescriptor descriptor = new OpenFileDescriptor(project, virtualFile, line - 1, 0);
                             FileEditorManager.getInstance(project).openTextEditor(descriptor, true);
+                        } else {
+                            LOG.warn("Navigation target not found. path=" + absolutePath);
                         }
                     }
                 }
@@ -451,6 +472,21 @@ public class DebtToolWindow {
         } else {
             sorter.setRowFilter(RowFilter.andFilter(filters));
         }
+        if (LOG.isDebugEnabled()) {
+            List<String> actives = new ArrayList<>();
+            if (!fileFilter.getText().isBlank()) actives.add("file");
+            if (!titleFilter.getText().isBlank()) actives.add("title");
+            if (!descFilter.getText().isBlank()) actives.add("description");
+            if (!userFilter.getText().isBlank()) actives.add("user");
+            if (!wantedLevelFilter.getSelected().isEmpty()) actives.add("wantedLevel");
+            if (!complexityFilter.getSelected().isEmpty()) actives.add("complexity");
+            if (!statusFilter.getSelected().isEmpty()) actives.add("status");
+            if (!priorityFilter.getSelected().isEmpty()) actives.add("priority");
+            if (!riskFilter.getSelected().isEmpty()) actives.add("risk");
+            if (!targetVersionFilter.getText().isBlank()) actives.add("targetVersion");
+            if (!commentFilter.getText().isBlank()) actives.add("comment");
+            LOG.debug("Filters applied. active=" + actives + " visibleRows=" + table.getRowCount());
+        }
     }
 
     private void addTextFilter(List<RowFilter<DebtTableModel, Object>> filters, String text, int column) {
@@ -474,6 +510,7 @@ public class DebtToolWindow {
     }
 
     private void updateTable() {
+        long start = System.currentTimeMillis();
         tableModel.clearAll();
         allItems.clear();
 
@@ -491,7 +528,11 @@ public class DebtToolWindow {
 
         // Apply filters to table and update chart aggregation
         applyFilters();
+        int visible = table.getRowCount();
         updateChart();
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("updateTable completed in " + (System.currentTimeMillis() - start) + " ms. total=" + allItems.size() + " visible=" + visible);
+        }
     }
 
     private void updateChart() {
@@ -571,6 +612,7 @@ public class DebtToolWindow {
             }
         }
 
+        LOG.info("Export started to: " + selected.getAbsolutePath());
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Debt Items");
 
@@ -621,8 +663,10 @@ public class DebtToolWindow {
                 workbook.write(fos);
             }
 
+            LOG.info("Export completed. count=" + items.size() + " path=" + selected.getAbsolutePath());
             Messages.showInfoMessage(project, "Exported " + items.size() + " item(s) to:\n" + selected.getAbsolutePath(), "Export Successful");
         } catch (Exception ex) {
+            LOG.error("Export failed. path=" + selected.getAbsolutePath() + " message=" + ex.getMessage(), ex);
             Messages.showErrorDialog(project, "Failed to export XLSX:\n" + ex.getMessage(), "Export Failed");
         }
     }

@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
@@ -20,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class AddDebtAction extends AnAction {
+    private static final Logger LOG = Logger.getInstance(AddDebtAction.class);
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
@@ -41,9 +43,12 @@ public class AddDebtAction extends AnAction {
                     Path abs = Paths.get(storedPath).toAbsolutePath().normalize();
                     Path base = Paths.get(basePath).toAbsolutePath().normalize();
                     if (abs.startsWith(base)) {
+                        String before = storedPath;
                         storedPath = base.relativize(abs).toString().replace('\\', '/');
+                        if (LOG.isDebugEnabled()) LOG.debug("Relativized path for add: '" + before + "' -> '" + storedPath + "'");
                     }
-                } catch (Exception ignored) {
+                } catch (Exception ex) {
+                    LOG.error("Failed to relativize path for add. stored=" + storedPath + " basePath=" + basePath + " msg=" + ex.getMessage(), ex);
                 }
             }
             DebtItem debtItem = new DebtItem(
@@ -63,8 +68,14 @@ public class AddDebtAction extends AnAction {
             String currentModule = resolveCurrentModule(file.getPath(), project.getBasePath());
             if (currentModule != null) {
                 debtItem.setCurrentModule(currentModule);
+                if (LOG.isDebugEnabled()) LOG.debug("Resolved currentModule=" + currentModule + " for file=" + file.getPath());
             }
+            LOG.info("Add debt confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
+                    " title=\"" + debtItem.getTitle() + "\"" +
+                    " user=" + debtItem.getUsername());
             debtService.add(debtItem);
+        } else {
+            if (LOG.isDebugEnabled()) LOG.debug("Add debt dialog canceled");
         }
     }
 
