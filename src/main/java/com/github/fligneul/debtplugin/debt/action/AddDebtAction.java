@@ -58,7 +58,7 @@ public class AddDebtAction extends AnAction {
                     dialog.getPriority(),
                     dialog.getRisk(),
                     dialog.getTargetVersion(),
-                    ""
+                    dialog.getComment()
             );
             String currentModule = resolveCurrentModule(file.getPath(), project.getBasePath());
             if (currentModule != null) {
