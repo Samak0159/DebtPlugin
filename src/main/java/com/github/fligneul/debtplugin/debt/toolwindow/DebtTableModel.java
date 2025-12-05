@@ -89,12 +89,14 @@ public class DebtTableModel extends DefaultTableModel {
                 else if (aValue instanceof String s) {
                     try { asInt = Integer.parseInt(s); } catch (NumberFormatException ex) { asInt = oldDebtItem.getWantedLevel(); }
                 } else asInt = oldDebtItem.getWantedLevel();
+                // Clamp to [1..5]
+                int clamped = Math.max(1, Math.min(5, asInt));
                 updatedDebtItem = new DebtItem(
                         oldDebtItem.getFile(), oldDebtItem.getLine(),
                         oldDebtItem.getTitle(),
                         oldDebtItem.getDescription(),
                         oldDebtItem.getUsername(),
-                        asInt,
+                        clamped,
                         oldDebtItem.getComplexity(),
                         oldDebtItem.getStatus(),
                         oldDebtItem.getPriority(),
@@ -102,6 +104,8 @@ public class DebtTableModel extends DefaultTableModel {
                         oldDebtItem.getTargetVersion(),
                         oldDebtItem.getComment()
                 );
+                // Also reflect the clamped value in the table model
+                aValue = clamped;
             }
             case 6 -> updatedDebtItem = new DebtItem(
                     oldDebtItem.getFile(), oldDebtItem.getLine(),
