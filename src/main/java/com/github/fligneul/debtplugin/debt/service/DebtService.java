@@ -16,7 +16,9 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.github.fligneul.debtplugin.debt.listener.DebtDocumentListener;
+import com.github.fligneul.debtplugin.debt.listener.DebtVfsListener;
 import com.intellij.openapi.editor.EditorFactory;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -59,6 +61,13 @@ public final class DebtService {
             LOG.info("DebtService: Document listener registered to update debt line numbers on edits");
         } catch (Throwable t) {
             LOG.warn("Failed to register document listener: " + t.getMessage(), t);
+        }
+        // Listen to VFS rename/move to keep debt file paths in sync
+        try {
+            project.getMessageBus().connect(project).subscribe(VirtualFileManager.VFS_CHANGES, new DebtVfsListener(project));
+            LOG.info("DebtService: VFS listener registered to update debt file paths on rename/move");
+        } catch (Throwable t) {
+            LOG.warn("Failed to register VFS listener: " + t.getMessage(), t);
         }
     }
 
