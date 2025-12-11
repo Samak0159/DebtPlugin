@@ -15,6 +15,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
+import com.github.fligneul.debtplugin.debt.listener.DebtDocumentListener;
+import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -51,6 +53,13 @@ public final class DebtService {
                 " basePath=" + project.getBasePath() +
                 " relPath=" + settings.getState().getDebtFilePath());
         loadDebts();
+        // Listen to document changes to keep debt line numbers in sync with file edits
+        try {
+            EditorFactory.getInstance().getEventMulticaster().addDocumentListener(new DebtDocumentListener(project), project);
+            LOG.info("DebtService: Document listener registered to update debt line numbers on edits");
+        } catch (Throwable t) {
+            LOG.warn("Failed to register document listener: " + t.getMessage(), t);
+        }
     }
 
     private File resolveDebtFile() {
