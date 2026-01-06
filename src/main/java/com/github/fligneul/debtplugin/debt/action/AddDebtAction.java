@@ -36,21 +36,11 @@ public class AddDebtAction extends AnAction {
             DebtService debtService = project.getService(DebtService.class);
             DebtSettings settings = project.getService(DebtSettings.class);
             String username = settings.getOrInitUsername();
-            String storedPath = file.getPath();
-            String basePath = project.getBasePath();
-            if (basePath != null) {
-                try {
-                    Path abs = Paths.get(storedPath).toAbsolutePath().normalize();
-                    Path base = Paths.get(basePath).toAbsolutePath().normalize();
-                    if (abs.startsWith(base)) {
-                        String before = storedPath;
-                        storedPath = base.relativize(abs).toString().replace('\\', '/');
-                        if (LOG.isDebugEnabled()) LOG.debug("Relativized path for add: '" + before + "' -> '" + storedPath + "'");
-                    }
-                } catch (Exception ex) {
-                    LOG.error("Failed to relativize path for add. stored=" + storedPath + " basePath=" + basePath + " msg=" + ex.getMessage(), ex);
-                }
-            }
+            String absolute = file.getPath();
+            // Determine repository root and store repo-relative path
+            DebtService ds = project.getService(DebtService.class);
+            String repoRoot = ds.findRepoRootForAbsolutePath(absolute);
+            String storedPath = repoRoot.isEmpty() ? absolute : ds.toRepoRelative(absolute, repoRoot);
             DebtItem debtItem = new DebtItem(
                     storedPath,
                     editor.getCaretModel().getLogicalPosition().line + 1,
@@ -73,7 +63,7 @@ public class AddDebtAction extends AnAction {
             LOG.info("Add debt confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
                     " title=\"" + debtItem.getTitle() + "\"" +
                     " user=" + debtItem.getUsername());
-            debtService.add(debtItem);
+            debtService.add(debtItem, repoRoot);
         } else {
             if (LOG.isDebugEnabled()) LOG.debug("Add debt dialog canceled");
         }

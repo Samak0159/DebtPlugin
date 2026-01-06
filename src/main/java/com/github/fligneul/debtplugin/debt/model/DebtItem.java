@@ -65,44 +65,120 @@ public class DebtItem {
         this.comment = Objects.requireNonNull(comment, "comment");
     }
 
-    @NotNull public String getFile() { return file; }
-    public void setFile(@NotNull String file) { this.file = file; }
+    @NotNull
+    public String getFile() {
+        return file;
+    }
 
-    public int getLine() { return line; }
-    public void setLine(int line) { this.line = line; }
+    public void setFile(@NotNull String file) {
+        this.file = file;
+    }
 
-    @NotNull public String getTitle() { return title; }
-    public void setTitle(@NotNull String title) { this.title = title; }
+    public int getLine() {
+        return line;
+    }
 
-    @NotNull public String getDescription() { return description; }
-    public void setDescription(@NotNull String description) { this.description = description; }
+    public void setLine(int line) {
+        this.line = line;
+    }
 
-    @NotNull public String getUsername() { return username; }
-    public void setUsername(@NotNull String username) { this.username = username; }
+    @NotNull
+    public String getTitle() {
+        return title;
+    }
 
-    public int getWantedLevel() { return wantedLevel; }
-    public void setWantedLevel(int wantedLevel) { this.wantedLevel = wantedLevel; }
+    public void setTitle(@NotNull String title) {
+        this.title = title;
+    }
 
-    @NotNull public Complexity getComplexity() { return complexity; }
-    public void setComplexity(@NotNull Complexity complexity) { this.complexity = complexity; }
+    @NotNull
+    public String getDescription() {
+        return description;
+    }
 
-    @NotNull public Status getStatus() { return status; }
-    public void setStatus(@NotNull Status status) { this.status = status; }
+    public void setDescription(@NotNull String description) {
+        this.description = description;
+    }
 
-    @NotNull public Priority getPriority() { return priority; }
-    public void setPriority(@NotNull Priority priority) { this.priority = priority; }
+    @NotNull
+    public String getUsername() {
+        return username;
+    }
 
-    @NotNull public Risk getRisk() { return risk; }
-    public void setRisk(@NotNull Risk risk) { this.risk = risk; }
+    public void setUsername(@NotNull String username) {
+        this.username = username;
+    }
 
-    @NotNull public String getTargetVersion() { return targetVersion; }
-    public void setTargetVersion(@NotNull String targetVersion) { this.targetVersion = targetVersion; }
+    public int getWantedLevel() {
+        return wantedLevel;
+    }
 
-    @NotNull public String getComment() { return comment; }
-    public void setComment(@NotNull String comment) { this.comment = comment; }
+    public void setWantedLevel(int wantedLevel) {
+        this.wantedLevel = wantedLevel;
+    }
 
-    @NotNull public String getCurrentModule() { return currentModule; }
-    public void setCurrentModule(@NotNull String moduleParent) { this.currentModule = moduleParent; }
+    @NotNull
+    public Complexity getComplexity() {
+        return complexity;
+    }
+
+    public void setComplexity(@NotNull Complexity complexity) {
+        this.complexity = complexity;
+    }
+
+    @NotNull
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(@NotNull Status status) {
+        this.status = status;
+    }
+
+    @NotNull
+    public Priority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(@NotNull Priority priority) {
+        this.priority = priority;
+    }
+
+    @NotNull
+    public Risk getRisk() {
+        return risk;
+    }
+
+    public void setRisk(@NotNull Risk risk) {
+        this.risk = risk;
+    }
+
+    @NotNull
+    public String getTargetVersion() {
+        return targetVersion;
+    }
+
+    public void setTargetVersion(@NotNull String targetVersion) {
+        this.targetVersion = targetVersion;
+    }
+
+    @NotNull
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(@NotNull String comment) {
+        this.comment = comment;
+    }
+
+    @NotNull
+    public String getCurrentModule() {
+        return currentModule;
+    }
+
+    public void setCurrentModule(@NotNull String moduleParent) {
+        this.currentModule = moduleParent;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -139,5 +215,26 @@ public class DebtItem {
                 ", comment='" + comment + '\'' +
                 ", currentModule='" + currentModule + '\'' +
                 '}';
+    }
+
+    @Override
+    public DebtItem clone() {
+        final DebtItem clone = new DebtItem(
+                this.getFile(),
+                this.getLine(),
+                this.getTitle(),
+                this.getDescription(),
+                this.getUsername(),
+                this.getWantedLevel(),
+                this.getComplexity(),
+                this.getStatus(),
+                this.getPriority(),
+                this.getRisk(),
+                this.getTargetVersion(),
+                this.getComment()
+        );
+        clone.setCurrentModule(this.getCurrentModule());
+
+        return clone;
     }
 }

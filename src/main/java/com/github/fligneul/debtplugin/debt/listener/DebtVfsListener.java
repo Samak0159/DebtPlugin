@@ -1,11 +1,11 @@
 package com.github.fligneul.debtplugin.debt.listener;
 
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
+import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent;
@@ -14,9 +14,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -39,40 +38,38 @@ public final class DebtVfsListener implements BulkFileListener {
             DebtService debtService = project.getService(DebtService.class);
             String basePath = project.getBasePath();
 
-            // Collect runnable updates and apply at the end to avoid concurrent modification
-            List<Runnable> updates = new ArrayList<>();
-
-            for (VFileEvent e : events) {
+            for (VFileEvent event : events) {
                 try {
-                    if (e instanceof VFileMoveEvent move) {
-                        VirtualFile file = move.getFile();
-                        if (file == null) continue;
-                        boolean isDir = file.isDirectory();
-                        String oldPathAbs = buildPath(move.getOldParent().getPath(), file.getName());
-                        String newPathAbs = buildPath(move.getNewParent().getPath(), file.getName());
-                        String oldRel = toProjectRelativeSafe(oldPathAbs, basePath);
-                        String newRel = toProjectRelativeSafe(newPathAbs, basePath);
-                        collectUpdatesForPathChange(debtService, oldRel, newRel, isDir, updates);
-                    } else if (e instanceof VFilePropertyChangeEvent prop) {
+                    final VirtualFile file;
+                    final String oldPathAbs;
+                    final String newPathAbs;
+                    if (event instanceof VFileMoveEvent move) {
+                        file = move.getFile();
+                        oldPathAbs = buildPath(move.getOldParent().getPath(), file.getName());
+                        newPathAbs = buildPath(move.getNewParent().getPath(), file.getName());
+                    } else if (event instanceof VFilePropertyChangeEvent prop) {
                         if (!Objects.equals(prop.getPropertyName(), VirtualFile.PROP_NAME)) continue; // rename only
-                        VirtualFile file = prop.getFile();
-                        if (file == null) continue;
-                        boolean isDir = file.isDirectory();
+                        file = prop.getFile();
                         String parent = file.getParent() != null ? file.getParent().getPath() : null;
-                        String oldPathAbs = buildPath(parent, Objects.toString(prop.getOldValue(), file.getName()));
-                        String newPathAbs = buildPath(parent, Objects.toString(prop.getNewValue(), file.getName()));
-                        String oldRel = toProjectRelativeSafe(oldPathAbs, basePath);
-                        String newRel = toProjectRelativeSafe(newPathAbs, basePath);
-                        collectUpdatesForPathChange(debtService, oldRel, newRel, isDir, updates);
+                        oldPathAbs = buildPath(parent, Objects.toString(prop.getOldValue(), file.getName()));
+                        newPathAbs = buildPath(parent, Objects.toString(prop.getNewValue(), file.getName()));
+                    } else {
+                        throw new RuntimeException("Event not handle");
                     }
+
+                    String oldRepoRoot = debtService.findRepoRootForAbsolutePath(oldPathAbs);
+                    String newRepoRoot = debtService.findRepoRootForAbsolutePath(newPathAbs);
+                    String oldRel = oldRepoRoot.isEmpty() ? toProjectRelativeSafe(oldPathAbs, basePath) : debtService.toRepoRelative(oldPathAbs, oldRepoRoot);
+                    String newRel = oldRepoRoot.isEmpty() ? toProjectRelativeSafe(newPathAbs, basePath) : debtService.toRepoRelative(newPathAbs, oldRepoRoot);
+                    updateItems(debtService,
+                            oldRepoRoot,
+                            newRepoRoot,
+                            oldRel,
+                            newRel);
+
                 } catch (Exception perEventEx) {
                     LOG.warn("DebtVfsListener: failed to process event: " + perEventEx.getMessage(), perEventEx);
                 }
-            }
-
-            if (!updates.isEmpty()) {
-                LOG.info("DebtVfsListener: applying " + updates.size() + " file path update(s)");
-                for (Runnable r : updates) r.run();
             }
         } catch (Exception ex) {
             LOG.warn("DebtVfsListener.after failed: " + ex.getMessage(), ex);
@@ -85,39 +82,53 @@ public final class DebtVfsListener implements BulkFileListener {
         return (p + name).replace('\\', '/');
     }
 
-    private static void collectUpdatesForPathChange(DebtService service,
-                                                    String oldRel,
-                                                    String newRel,
-                                                    boolean isDirectory,
-                                                    List<Runnable> outUpdates) {
-        List<DebtItem> all = service.all();
-        String oldRelNorm = normalizeForCompare(oldRel);
-        String oldDirPrefix = isDirectory ? ensureTrailingSlash(oldRel) : null;
-        for (DebtItem d : all) {
-            String stored = d.getFile();
-            String storedNorm = normalizeForCompare(stored);
-            if (!isDirectory) {
-                // Exact file move/rename
-                if (storedNorm.equalsIgnoreCase(oldRelNorm)) {
-                    final DebtItem oldItem = d;
-                    final String newFile = newRel;
-                    outUpdates.add(() -> applyFileUpdate(service, oldItem, newFile));
+    private void updateItems(DebtService service,
+                             String oldRepoRoot,
+                             String newRepoRoot,
+                             String oldRel,
+                             String newRel) {
+
+        if (oldRepoRoot.equals(newRepoRoot)) {
+            // File has been moved or renamed in the same Repository
+            final Map.Entry<Repository, List<DebtItem>> debtsForRepository = service.getDebtForRepositoryAbsolutePath(oldRepoRoot)
+                    .orElseThrow();
+
+            debtsForRepository.getValue()
+                    .stream()
+                    .filter(debtItem -> debtItem.getFile().equals(oldRel))
+                    .findFirst()
+                    .ifPresent(oldItem -> applyFileUpdate(debtsForRepository, service, oldItem, newRel));
+        } else {
+            // File has been moved or renamed in another Repository
+            final Map.Entry<Repository, List<DebtItem>> oldRepository = service.getDebtForRepositoryAbsolutePath(oldRepoRoot)
+                    .orElseThrow();
+
+            DebtItem oldItem = null;
+            int index = -1;
+            for (int i = 0; i < oldRepository.getValue().size(); i++) {
+                final DebtItem debtItem = oldRepository.getValue().get(i);
+                if (debtItem.getFile().equals(oldRel)) {
+                    oldItem = debtItem;
+                    index = i;
+                    break;
                 }
-            } else {
-                // Directory move/rename: replace prefix
-                String storedWithSlash = ensureTrailingSlash(stored);
-                if (storedWithSlash.toLowerCase(Locale.getDefault()).startsWith(ensureTrailingSlash(oldRel).toLowerCase(Locale.getDefault()))) {
-                    String suffix = stored.substring(oldRel.length());
-                    String updatedPath = ensureTrailingSlash(newRel) + trimLeadingSlash(suffix);
-                    final DebtItem oldItem = d;
-                    final String newFile = updatedPath;
-                    outUpdates.add(() -> applyFileUpdate(service, oldItem, newFile));
-                }
+            }
+
+            if (index > -1) {
+                oldRepository.getValue().remove(index);
+            }
+
+            if (oldItem != null) {
+                final DebtItem clone = oldItem.clone();
+
+                clone.setFile(newRel);
+
+                service.add(clone, newRepoRoot);
             }
         }
     }
 
-    private static void applyFileUpdate(DebtService service, DebtItem oldItem, String newFile) {
+    private void applyFileUpdate(final Map.Entry<Repository, List<DebtItem>> debtsForRepository, DebtService service, DebtItem oldItem, String newFile) {
         DebtItem updated = new DebtItem(
                 newFile,
                 oldItem.getLine(),
@@ -133,26 +144,7 @@ public final class DebtVfsListener implements BulkFileListener {
                 oldItem.getComment()
         );
         updated.setCurrentModule(oldItem.getCurrentModule());
-        service.update(oldItem, updated);
-    }
-
-    private static String ensureTrailingSlash(String p) {
-        if (p == null || p.isEmpty()) return p;
-        String s = p.replace('\\', '/');
-        return s.endsWith("/") ? s : s + "/";
-        
-    }
-
-    private static String trimLeadingSlash(String p) {
-        if (p == null) return "";
-        String s = p.replace('\\', '/');
-        while (s.startsWith("/")) s = s.substring(1);
-        return s;
-    }
-
-    private static String normalizeForCompare(String any) {
-        if (any == null) return "";
-        return any.replace('\\', '/');
+        service.update(debtsForRepository, oldItem, updated);
     }
 
     private static String toProjectRelativeSafe(String anyPath, String basePath) {

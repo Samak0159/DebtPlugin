@@ -1,8 +1,11 @@
 package com.github.fligneul.debtplugin.debt.service;
 
+import com.github.fligneul.debtplugin.debt.listener.DebtDocumentListener;
+import com.github.fligneul.debtplugin.debt.listener.DebtVfsListener;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
+import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
@@ -15,13 +18,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
-import com.github.fligneul.debtplugin.debt.listener.DebtDocumentListener;
-import com.github.fligneul.debtplugin.debt.listener.DebtVfsListener;
-import com.intellij.openapi.editor.EditorFactory;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFileManager;
+import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -32,17 +34,25 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service(Service.Level.PROJECT)
 public final class DebtService {
+    public static final Topic<DebtServiceListener> TOPIC = Topic.create("Debt Service Changed", DebtServiceListener.class);
+
     private static final Logger LOG = Logger.getInstance(DebtService.class);
+
     private final Project project;
     private final Gson gson;
     private final DebtSettings settings;
-    private final List<DebtItem> debts = new ArrayList<>();
-    private File debtFile;
+    // Unified storage: key = repository, value = items in that repo
+    private final Map<Repository, List<DebtItem>> debtsByRepository = new LinkedHashMap<>();
 
     public DebtService(@NotNull Project project) {
         this.project = Objects.requireNonNull(project, "project");
@@ -50,11 +60,9 @@ public final class DebtService {
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(DebtItem.class, new DebtItemDeserializer())
                 .create();
-        this.debtFile = resolveDebtFile();
-        LOG.info("DebtService initialized. debtFile=" + getDebtFile().getAbsolutePath() +
-                " basePath=" + project.getBasePath() +
-                " relPath=" + settings.getState().getDebtFilePath());
+
         loadDebts();
+
         // Listen to document changes to keep debt line numbers in sync with file edits
         try {
             EditorFactory.getInstance().getEventMulticaster().addDocumentListener(new DebtDocumentListener(project), project);
@@ -71,184 +79,331 @@ public final class DebtService {
         }
     }
 
-    private File resolveDebtFile() {
-        String basePath = project.getBasePath();
-        String rel = settings.getState().getDebtFilePath();
-        if (basePath == null) basePath = new File(".").getAbsolutePath();
-        File f = new File(basePath, rel);
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("resolveDebtFile basePath=" + basePath + " relPath=" + rel + " -> " + f.getAbsolutePath());
+    private void ensureJsonFileExist() {
+        if (debtsByRepository.isEmpty()) {
+            return;
         }
-        return f;
+        final Map<String, String> jsonPathByRepositoryAbsolutePath = Optional.ofNullable(settings.getState())
+                .map(DebtSettings.State::getRepoDebtPaths)
+                .orElseGet(LinkedHashMap::new);
+
+        for (Repository repository : debtsByRepository.keySet()) {
+            String jsonPath = jsonPathByRepositoryAbsolutePath.get(repository.getRepositoryAbsolutePath());
+            String pathToShow;
+            if (jsonPath == null || jsonPath.isBlank()) {
+                // show only the default relative path
+                pathToShow = DebtSettings.DEFAULT_DEBT_FILE_PATH;
+            } else {
+                pathToShow = toRelativeIfPossible(repository.getRepositoryAbsolutePath(), jsonPath);
+            }
+
+            ensureFileExists(repository.getRepositoryAbsolutePath(), pathToShow);
+            repository.setJsonPath(pathToShow);
+        }
     }
 
-    public synchronized void add(@NotNull DebtItem debtItem) {
-        DebtItem di = Objects.requireNonNull(debtItem);
-        debts.add(di);
-        LOG.info("Added debt: file=" + di.getFile() + ":" + di.getLine() +
-                " title=\"" + di.getTitle() + "\"" +
-                " desc=\"" + di.getDescription() + "\"" +
-                " user=" + di.getUsername() +
-                " targetVersion=\"" + di.getTargetVersion() + "\"" +
-                " comment=\"" + di.getComment() + "\"" +
-                " wantedLevel=" + di.getWantedLevel() +
-                " complexity=" + di.getComplexity() +
-                " status=" + di.getStatus() +
-                " priority=" + di.getPriority() +
-                " risk=" + di.getRisk());
-        saveDebts();
-        LOG.info("Debts saved after add. total=" + debts.size());
+    private static String toRelativeIfPossible(String repoRoot, String value) {
+        if (value == null) return "";
+        String v = value.trim();
+        if (v.isEmpty()) return "";
+        try {
+            Path root = Paths.get(repoRoot).toAbsolutePath().normalize();
+            Path p = Paths.get(v);
+            Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : root.resolve(p).normalize();
+            if (abs.startsWith(root)) {
+                return root.relativize(abs).toString().replace('\\', '/');
+            }
+            return v.replace('\\', '/');
+        } catch (Exception e) {
+            return v.replace('\\', '/');
+        }
+    }
+
+    public synchronized void add(@NotNull DebtItem debtItem, @NotNull final String repoRoot) {
+        getDebtForRepositoryAbsolutePath(repoRoot)
+                .map(Map.Entry::getValue)
+                .ifPresent(debts -> debts.add(debtItem));
+
+        LOG.info("Added debtItem: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
+                " title=\"" + debtItem.getTitle() + "\"" +
+                " desc=\"" + debtItem.getDescription() + "\"" +
+                " user=" + debtItem.getUsername() +
+                " targetVersion=\"" + debtItem.getTargetVersion() + "\"" +
+                " comment=\"" + debtItem.getComment() + "\"" +
+                " wantedLevel=" + debtItem.getWantedLevel() +
+                " complexity=" + debtItem.getComplexity() +
+                " status=" + debtItem.getStatus() +
+                " priority=" + debtItem.getPriority() +
+                " risk=" + debtItem.getRisk());
+
+        saveDebts(repoRoot);
+
         refreshHighlighting();
     }
 
+    public Optional<Map.Entry<Repository, List<DebtItem>>> getDebtForRepositoryAbsolutePath(final @NotNull String repoRoot) {
+        return debtsByRepository.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().getRepositoryAbsolutePath().equals(repoRoot))
+                .findFirst();
+    }
+
     public synchronized void remove(@NotNull DebtItem debtItem) {
-        boolean removed = debts.remove(debtItem);
-        if (removed) {
-            LOG.info("Removed debt: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
-                    " title=\"" + debtItem.getTitle() + "\"" +
-                    " desc=\"" + debtItem.getDescription() + "\"" +
-                    " user=" + debtItem.getUsername() +
-                    " targetVersion=\"" + debtItem.getTargetVersion() + "\"" +
-                    " comment=\"" + debtItem.getComment() + "\"");
-            saveDebts();
-            LOG.info("Debts saved after remove. total=" + debts.size());
-            refreshHighlighting();
-        } else {
-            LOG.warn("Attempted to remove non-existing debt: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
-                    " title=\"" + debtItem.getTitle() + "\"");
-        }
+        debtsByRepository.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().contains(debtItem))
+                .findFirst()
+                .ifPresentOrElse(entry -> {
+                            entry.getValue().removeIf(currentDebtItem -> currentDebtItem.equals(debtItem));
+
+                            LOG.info("Removed debt: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
+                                    " title=\"" + debtItem.getTitle() + "\"" +
+                                    " desc=\"" + debtItem.getDescription() + "\"" +
+                                    " user=" + debtItem.getUsername() +
+                                    " targetVersion=\"" + debtItem.getTargetVersion() + "\"" +
+                                    " comment=\"" + debtItem.getComment() + "\"");
+
+                            saveDebts(entry.getKey().getRepositoryAbsolutePath());
+                        },
+                        () -> LOG.warn("Attempted to remove non-existing debt: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
+                                " title=\"" + debtItem.getTitle() + "\""));
     }
 
     public synchronized void update(@NotNull DebtItem oldDebtItem, @NotNull DebtItem newDebtItem) {
-        int index = debts.indexOf(oldDebtItem);
-        if (index != -1) {
-            debts.set(index, newDebtItem);
-            LOG.info("Updated debt: file=" + newDebtItem.getFile() + ":" + newDebtItem.getLine() +
-                    " title=\"" + oldDebtItem.getTitle() + "\" -> \"" + newDebtItem.getTitle() + "\"" +
-                    " desc=\"" + oldDebtItem.getDescription() + "\" -> \"" + newDebtItem.getDescription() + "\"" +
-                    " user=" + newDebtItem.getUsername() +
-                    " targetVersion=\"" + oldDebtItem.getTargetVersion() + "\" -> \"" + newDebtItem.getTargetVersion() + "\"" +
-                    " comment=\"" + oldDebtItem.getComment() + "\" -> \"" + newDebtItem.getComment() + "\"" +
-                    " wantedLevel=" + oldDebtItem.getWantedLevel() + "->" + newDebtItem.getWantedLevel() +
-                    " complexity=" + oldDebtItem.getComplexity() + "->" + newDebtItem.getComplexity() +
-                    " status=" + oldDebtItem.getStatus() + "->" + newDebtItem.getStatus() +
-                    " priority=" + oldDebtItem.getPriority() + "->" + newDebtItem.getPriority() +
-                    " risk=" + oldDebtItem.getRisk() + "->" + newDebtItem.getRisk());
-            saveDebts();
-            LOG.info("Debts saved after update. total=" + debts.size());
-            refreshHighlighting();
-        } else {
-            LOG.warn("Attempted to update non-existing debt: file=" + oldDebtItem.getFile() + ":" + oldDebtItem.getLine() +
-                    " title=\"" + oldDebtItem.getTitle() + "\"");
-        }
+        debtsByRepository.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().contains(oldDebtItem))
+                .findFirst()
+                .ifPresentOrElse(entry -> update(entry, oldDebtItem, newDebtItem),
+                        () -> LOG.warn("Attempted to update non-existing debt: file=" + oldDebtItem.getFile() + ":" + oldDebtItem.getLine() +
+                                " title=\"" + oldDebtItem.getTitle() + "\""));
+    }
+
+    public void update(final Map.Entry<Repository, List<DebtItem>> entry, final @NotNull DebtItem oldDebtItem, final @NotNull DebtItem newDebtItem) {
+        final List<DebtItem> debts = entry.getValue();
+
+        final int currentIndex = debts.indexOf(oldDebtItem);
+        debts.remove(currentIndex);
+
+        debts.add(currentIndex, newDebtItem);
+
+        LOG.info("Updated debt: file=" + newDebtItem.getFile() + ":" + newDebtItem.getLine() +
+                " title=\"" + oldDebtItem.getTitle() + "\" -> \"" + newDebtItem.getTitle() + "\"" +
+                " desc=\"" + oldDebtItem.getDescription() + "\" -> \"" + newDebtItem.getDescription() + "\"" +
+                " user=" + newDebtItem.getUsername() +
+                " targetVersion=\"" + oldDebtItem.getTargetVersion() + "\" -> \"" + newDebtItem.getTargetVersion() + "\"" +
+                " comment=\"" + oldDebtItem.getComment() + "\" -> \"" + newDebtItem.getComment() + "\"" +
+                " wantedLevel=" + oldDebtItem.getWantedLevel() + "->" + newDebtItem.getWantedLevel() +
+                " complexity=" + oldDebtItem.getComplexity() + "->" + newDebtItem.getComplexity() +
+                " status=" + oldDebtItem.getStatus() + "->" + newDebtItem.getStatus() +
+                " priority=" + oldDebtItem.getPriority() + "->" + newDebtItem.getPriority() +
+                " risk=" + oldDebtItem.getRisk() + "->" + newDebtItem.getRisk());
+
+        saveDebts();
+
+        refreshHighlighting();
     }
 
     @NotNull
     public synchronized List<DebtItem> all() {
-        return new ArrayList<>(debts);
-    }
-
-    // Kotlin property accessor compatibility: debtService.debtFile
-    @NotNull
-    public File getDebtFile() {
-        if (debtFile == null) {
-            if (LOG.isDebugEnabled()) LOG.debug("debtFile was null, resolving now");
-            debtFile = resolveDebtFile();
-        }
-        return debtFile;
+        return debtsByRepository.values()
+                .stream()
+                .flatMap(Collection::stream)
+                .toList();
     }
 
     public synchronized void migrateUsername(@NotNull String oldUsername, @NotNull String newUsername) {
         if (oldUsername.isBlank() || oldUsername.equals(newUsername)) return;
+
         LOG.info("Migrating username: from=" + oldUsername + " to=" + newUsername);
+
         int changedCount = 0;
-        for (int i = 0; i < debts.size(); i++) {
-            DebtItem d = debts.get(i);
-            if (oldUsername.equals(d.getUsername())) {
-                DebtItem updated = new DebtItem(
-                        d.getFile(),
-                        d.getLine(),
-                        d.getTitle(),
-                        d.getDescription(),
-                        newUsername,
-                        d.getWantedLevel(),
-                        d.getComplexity(),
-                        d.getStatus(),
-                        d.getPriority(),
-                        d.getRisk(),
-                        d.getTargetVersion(),
-                        d.getComment()
-                );
-                updated.setCurrentModule(d.getCurrentModule());
-                debts.set(i, updated);
-                changedCount++;
+        for (final List<DebtItem> debts : debtsByRepository.values()) {
+            for (int i = 0; i < debts.size(); i++) {
+                DebtItem debtItem = debts.get(i);
+                if (oldUsername.equals(debtItem.getUsername())) {
+                    DebtItem updated = new DebtItem(
+                            debtItem.getFile(),
+                            debtItem.getLine(),
+                            debtItem.getTitle(),
+                            debtItem.getDescription(),
+                            newUsername,
+                            debtItem.getWantedLevel(),
+                            debtItem.getComplexity(),
+                            debtItem.getStatus(),
+                            debtItem.getPriority(),
+                            debtItem.getRisk(),
+                            debtItem.getTargetVersion(),
+                            debtItem.getComment()
+                    );
+                    updated.setCurrentModule(debtItem.getCurrentModule());
+                    debts.set(i, updated);
+                    changedCount++;
+                }
             }
         }
+
         if (changedCount > 0) {
             saveDebts();
-            LOG.info("Username migration complete. changedItems=" + changedCount);
             refreshHighlighting();
+            LOG.info("Username migration complete. changedItems=" + changedCount);
         } else {
             LOG.info("Username migration: no items to update.");
         }
     }
 
-    private void loadDebts() {
-        File f = getDebtFile();
-        if (f.exists()) {
-            LOG.info("Loading debts from " + f.getAbsolutePath());
+    public void loadDebts() {
+        debtsByRepository.clear();
+        List<Repository> repositories = getRepositories();
+        String relPath = settings.getState().getDebtFilePath(project);
+        for (Repository repository : repositories) {
             try {
-                String content = Files.readString(f.toPath(), StandardCharsets.UTF_8);
-                Type type = new TypeToken<List<DebtItem>>() { }.getType();
+                File jsonFile = resolveRepoDebtFile(repository.getRepositoryAbsolutePath(), relPath);
+                if (!jsonFile.exists()) continue;
+                LOG.info("Loading debts from repo file: " + jsonFile.getAbsolutePath());
+                String content = Files.readString(jsonFile.toPath(), StandardCharsets.UTF_8);
+                Type type = new TypeToken<List<DebtItem>>() {
+                }.getType();
                 List<DebtItem> loaded = gson.fromJson(content, type);
-                debts.clear();
-                boolean changed = false;
-                int relativizedCount = 0;
-                if (loaded != null) {
-                    String basePath = project.getBasePath();
-                    for (DebtItem d : loaded) {
-                        String original = d.getFile();
-                        String relativized = toProjectRelative(original, basePath);
-                        if (!Objects.equals(original, relativized)) {
-                            d.setFile(relativized);
-                            changed = true;
-                            relativizedCount++;
-                            if (LOG.isDebugEnabled()) {
-                                LOG.debug("Relativized path from '" + original + "' to '" + relativized + "'");
-                            }
-                        }
-                        debts.add(d);
-                    }
-                    if (changed) {
-                        saveDebts();
-                    }
-                    LOG.info("Loaded debts: count=" + debts.size() + ", relativizedPaths=" + relativizedCount);
-                } else {
-                    LOG.info("Loaded debts: count=0");
-                }
-            } catch (com.google.gson.JsonParseException jpe) {
-                LOG.error("Failed to parse debts JSON. path=" + f.getAbsolutePath() + " message=" + jpe.getMessage(), jpe);
-            } catch (IOException io) {
-                LOG.warn("Failed to read debts file. path=" + f.getAbsolutePath() + " message=" + io.getMessage(), io);
+                if (loaded == null) continue;
+                debtsByRepository.put(repository, new ArrayList<>(loaded));
+                LOG.info("Loaded debts total=%s from repos=%s".formatted(loaded.size(), repositories.size()));
+            } catch (Exception ex) {
+                LOG.warn("Failed loading debts for repoRoot=" + repository + ": " + ex.getMessage(), ex);
             }
-        } else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Debts file does not exist yet: " + f.getAbsolutePath());
+        }
+
+        ensureJsonFileExist();
+    }
+
+    private void saveDebts(String repoRoot) {
+        getDebtForRepositoryAbsolutePath(repoRoot)
+                .ifPresent(this::saveDebts);
+    }
+
+    /**
+     * Save debts grouped by repository, writing one JSON file per repo root using the configured relative path.
+     * Items without repoRoot are saved into the legacy project-level file for backward compatibility.
+     */
+    private void saveDebts() {
+        for (Map.Entry<Repository, List<DebtItem>> entry : debtsByRepository.entrySet()) {
+            saveDebts(entry);
+        }
+    }
+
+    private void saveDebts(final Map.Entry<Repository, List<DebtItem>> entry) {
+        final Repository repository = entry.getKey();
+
+        final File jsonAbsolutePathFile = new File(repository.getRepositoryAbsolutePath(), repository.getJsonPath());
+        final Path jsonPath = jsonAbsolutePathFile.toPath();
+        final String jsonAbsolutePathStr = jsonAbsolutePathFile.getAbsolutePath();
+
+        final List<DebtItem> items = entry.getValue();
+
+        final String json = gson.toJson(items);
+
+        try {
+            Files.writeString(jsonPath, json, StandardCharsets.UTF_8);
+
+            LOG.info("Saved repo debts. repoRoot=%s count=%s path=%s".formatted(
+                    repository.getRepositoryAbsolutePath(),
+                    items.size(),
+                    jsonAbsolutePathStr));
+        } catch (IOException io) {
+            LOG.warn("Failed to write repo debts. path=" + jsonAbsolutePathStr + " message=" + io.getMessage(), io);
+        }
+    }
+
+    private File resolveRepoDebtFile(String repoRoot, String relPath) {
+        try {
+            Map<String, String> overrides = settings.getState().getRepoDebtPaths();
+            String val = overrides != null ? overrides.get(repoRoot) : null;
+            return resolveRepoDebtFileWithOverride(repoRoot, val, relPath);
+        } catch (Exception e) {
+            return new File(repoRoot, relPath);
+        }
+    }
+
+    private static File resolveRepoDebtFileWithOverride(String repoRoot, String overrideOrBlank, String defaultRelPath) {
+        try {
+            if (overrideOrBlank == null || overrideOrBlank.isBlank()) {
+                return new File(repoRoot, defaultRelPath);
+            }
+            File file = new File(overrideOrBlank);
+            return file.isAbsolute() ? file : new File(repoRoot, overrideOrBlank);
+        } catch (Exception e) {
+            return new File(repoRoot, defaultRelPath);
+        }
+    }
+
+    private void ensureFileExists(String absolutePath, String relativePath) {
+        final File file = new File(absolutePath, relativePath);
+
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+
+        if (!file.exists()) {
+            try {
+                Files.writeString(file.toPath(), "[]", StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                LOG.error("Error while creating %s".formatted(file.getAbsolutePath()));
             }
         }
     }
 
-    private void saveDebts() {
-        File f = getDebtFile();
-        LOG.info("Saving debts. count=" + debts.size() + " path=" + f.getAbsolutePath());
+    /**
+     * When a repository JSON path setting changes, try to move the existing file to the new location
+     * to preserve the user's data. This method is safe: it will not overwrite an existing target file.
+     *
+     * @param oldOverrides previous per-repo overrides (may be null)
+     * @param newOverrides new per-repo overrides (may be null)
+     */
+    public void renameRepoDebtJsonIfPathChanged(Map<String, String> oldOverrides,
+                                                Map<String, String> newOverrides) {
         try {
-            String json = gson.toJson(debts);
-            File parent = f.getParentFile();
-            if (parent != null && !parent.exists()) parent.mkdirs();
-            Files.writeString(f.toPath(), json, StandardCharsets.UTF_8);
-            LOG.info("Saved debts. count=" + debts.size() + " path=" + f.getAbsolutePath());
-        } catch (IOException io) {
-            LOG.warn("Failed to write debts file. path=" + f.getAbsolutePath() + " message=" + io.getMessage(), io);
+            String defaultRel = settings.getState().getDebtFilePath(project);
+            LinkedHashSet<String> roots = new LinkedHashSet<>();
+            if (oldOverrides != null) roots.addAll(oldOverrides.keySet());
+            if (newOverrides != null) roots.addAll(newOverrides.keySet());
+            // Also include known roots from detection and from existing debt items
+            getRepositories().stream()
+                    .map(Repository::getRepositoryAbsolutePath)
+                    .forEach(roots::add);
+
+            for (String root : roots) {
+                if (root == null || root.isBlank()) continue;
+                String oldOverride = oldOverrides == null ? null : oldOverrides.get(root);
+                String newOverride = newOverrides == null ? null : newOverrides.get(root);
+                File oldFile = resolveRepoDebtFileWithOverride(root, oldOverride, defaultRel);
+                File newFile = resolveRepoDebtFileWithOverride(root, newOverride, defaultRel);
+                // Normalize
+                Path oldPath = oldFile.toPath().toAbsolutePath().normalize();
+                Path newPath = newFile.toPath().toAbsolutePath().normalize();
+                if (oldPath.equals(newPath)) {
+                    continue; // nothing to do
+                }
+                if (!Files.exists(oldPath)) {
+                    if (LOG.isDebugEnabled())
+                        LOG.debug("renameRepoDebtJsonIfPathChanged: old file does not exist, skip. root=" + root + " old=" + oldPath);
+                    continue;
+                }
+                if (Files.exists(newPath)) {
+                    LOG.warn("Target debt JSON already exists, will not overwrite. root=" + root + " target=" + newPath);
+                    continue;
+                }
+                try {
+                    File parent = newPath.getParent() != null ? newPath.getParent().toFile() : null;
+                    if (parent != null && !parent.exists()) parent.mkdirs();
+                    Files.move(oldPath, newPath);
+                    LOG.info("Moved repo debt JSON file: " + oldPath + " -> " + newPath);
+                } catch (Exception moveEx) {
+                    LOG.warn("Failed to move repo debt JSON file: " + oldPath + " -> " + newPath + ". Reason: " + moveEx.getMessage(), moveEx);
+                }
+            }
+        } catch (Throwable t) {
+            LOG.warn("renameRepoDebtJsonIfPathChanged failed: " + t.getMessage(), t);
         }
     }
 
@@ -257,25 +412,56 @@ public final class DebtService {
         DaemonCodeAnalyzer.getInstance(project).restart();
     }
 
-    private static String toProjectRelative(String anyPath, String basePath) {
+    private List<Repository> getRepositories() {
+        final RepositoriesService repositoriesService = project.getService(RepositoriesService.class);
+        return repositoriesService.getRepositories();
+    }
+
+    public String findRepoRootForAbsolutePath(String absolutePath) {
+        if (absolutePath == null || absolutePath.isBlank()) return "";
+        String abs;
+        try {
+            abs = Paths.get(absolutePath).toAbsolutePath().normalize().toString();
+        } catch (Exception e) {
+            abs = absolutePath;
+        }
+        for (Repository repository : getRepositories()) {
+            try {
+                Path r = Paths.get(repository.getRepositoryAbsolutePath()).toAbsolutePath().normalize();
+                Path a = Paths.get(abs).toAbsolutePath().normalize();
+                if (a.startsWith(r)) return r.toString();
+            } catch (Exception ignore) {
+            }
+        }
+        return "";
+    }
+
+    public String toRepoRelative(String anyPath, String repoRoot) {
         if (anyPath == null) return "";
-        String norm = anyPath.replace('\\', '/');
         try {
             Path p = Paths.get(anyPath);
-            if (basePath != null) {
-                Path base = Paths.get(basePath).toAbsolutePath().normalize();
-                Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : base.resolve(p).normalize();
-                if (abs.startsWith(base)) {
-                    return base.relativize(abs).toString().replace('\\', '/');
+            Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : p.toAbsolutePath().normalize();
+            if (repoRoot != null && !repoRoot.isBlank()) {
+                Path root = Paths.get(repoRoot).toAbsolutePath().normalize();
+                if (abs.startsWith(root)) {
+                    return root.relativize(abs).toString().replace('\\', '/');
                 }
-                return abs.toString().replace('\\', '/');
-            } else {
-                Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : p.normalize();
-                return abs.toString().replace('\\', '/');
             }
+            return abs.toString().replace('\\', '/');
         } catch (Exception e) {
-            return norm;
+            return anyPath.replace('\\', '/');
         }
+    }
+
+    public Map<Repository, List<DebtItem>> getDebtsByRepository() {
+        return debtsByRepository;
+    }
+
+    public void refresh() {
+        final RepositoriesService repositoriesService = project.getService(RepositoriesService.class);
+        repositoriesService.refreshFromMisc();
+
+        project.getMessageBus().syncPublisher(TOPIC).refresh();
     }
 
     private static final class DebtItemDeserializer implements JsonDeserializer<DebtItem> {

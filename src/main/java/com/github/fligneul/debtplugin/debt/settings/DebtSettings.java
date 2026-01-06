@@ -4,10 +4,13 @@ import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.project.Project;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @State(
@@ -18,25 +21,53 @@ import java.util.UUID;
 public final class DebtSettings implements PersistentStateComponent<DebtSettings.State> {
 
     public static final Topic<DebtSettingsListener> TOPIC = Topic.create("Debt Settings Changed", DebtSettingsListener.class);
+    public static final String DEFAULT_DEBT_FILE_PATH = "dev/debt.json";
 
     public static final class State {
-        public String debtFilePath = "dev/debt.json";
         public String username = "";
+        // Optional per-repository override for JSON path. Key: absolute repo root; Value: absolute path or path relative to repo root.
+        public Map<String, String> repoDebtPaths = new HashMap<>();
 
-        public State() {}
+        public State() {
+        }
 
-        public String getDebtFilePath() { return debtFilePath; }
-        public void setDebtFilePath(String debtFilePath) { this.debtFilePath = debtFilePath; }
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public Map<String, String> getRepoDebtPaths() {
+            return repoDebtPaths;
+        }
+
+        public void setRepoDebtPaths(Map<String, String> repoDebtPaths) {
+            this.repoDebtPaths = repoDebtPaths;
+        }
+
+        public String getDebtFilePath(Project project) {
+            final String basePath = project.getBasePath();
+
+            return Optional.ofNullable(getRepoDebtPaths().get(basePath))
+                    .orElseGet(() -> {
+                        final String windowsBasePath = basePath.replace("/", "\\");
+
+                        return getRepoDebtPaths().get(windowsBasePath);
+                    });
+        }
     }
 
     private State myState = new State();
 
     @Override
-    public @Nullable State getState() {
+    public State getState() {
         if (myState.username == null || myState.username.isBlank()) {
             myState.username = UUID.randomUUID().toString();
+        }
+        if (myState.repoDebtPaths == null) {
+            myState.repoDebtPaths = new HashMap<>();
         }
         return myState;
     }
@@ -47,6 +78,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         if (myState.username == null || myState.username.isBlank()) {
             myState.username = UUID.randomUUID().toString();
         }
+        if (myState.repoDebtPaths == null) myState.repoDebtPaths = new HashMap<>();
     }
 
     public String getOrInitUsername() {

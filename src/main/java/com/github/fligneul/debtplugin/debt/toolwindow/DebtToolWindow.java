@@ -1,45 +1,42 @@
 package com.github.fligneul.debtplugin.debt.toolwindow;
 
+import com.github.fligneul.debtplugin.debt.action.AddDebtDialog;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
+import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
+import com.github.fligneul.debtplugin.debt.service.DebtServiceListener;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettingsListener;
-import com.github.fligneul.debtplugin.debt.action.AddDebtDialog;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;
-import com.intellij.util.containers.OrderedSet;
-import com.intellij.openapi.fileChooser.FileChooserFactory;
-import com.intellij.openapi.fileChooser.FileSaverDescriptor;
-import com.intellij.openapi.fileChooser.FileSaverDialog;
-import com.intellij.openapi.ui.Messages;
-import com.intellij.icons.AllIcons;
-import java.util.function.IntConsumer;
-import java.awt.Component;
-import java.awt.Point;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
-import javax.swing.JPopupMenu;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.RowFilter;
 import javax.swing.SwingUtilities;
-import javax.swing.JTabbedPane;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -51,33 +48,23 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 import java.util.regex.Pattern;
-
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class DebtToolWindow {
     private static final Logger LOG = Logger.getInstance(DebtToolWindow.class);
     private final Project project;
     private final DebtService debtService;
+    private final DebtProviderService debtProviderService;
     private final DebtTableModel tableModel;
     private final JBTable table;
     private final TableRowSorter<DebtTableModel> sorter;
@@ -126,14 +113,12 @@ public class DebtToolWindow {
     public DebtToolWindow(Project project) {
         this.project = project;
         this.debtService = project.getService(DebtService.class);
+        this.debtProviderService = project.getService(DebtProviderService.class);
         this.tableModel = new DebtTableModel(debtService);
         this.table = new JBTable(tableModel);
         this.sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
         this.pieChartPanel = new ModulePieChartPanel();
-
-        int initialCount = debtService.all().size();
-        LOG.info("DebtToolWindow initialized. initialCount=" + initialCount + " debtFile=" + debtService.getDebtFile().getAbsolutePath());
 
         // Configure multi-select enum filters
         complexityFilter.setOptions(Arrays.asList(Complexity.values()));
@@ -194,7 +179,8 @@ public class DebtToolWindow {
                     debtService.update(oldItem, newItem);
                     updateTable();
                 } else {
-                    if (LOG.isDebugEnabled()) LOG.debug("Edit dialog canceled for file=" + oldItem.getFile() + ":" + oldItem.getLine());
+                    if (LOG.isDebugEnabled())
+                        LOG.debug("Edit dialog canceled for file=" + oldItem.getFile() + ":" + oldItem.getLine());
                 }
             }
         }, viewRow -> {
@@ -218,18 +204,18 @@ public class DebtToolWindow {
         project.getMessageBus().connect().subscribe(DebtSettings.TOPIC, new DebtSettingsListener() {
             @Override
             public void settingsChanged(DebtSettings.State settings) {
-                LOG.info("Settings changed: username=" + settings.getUsername() + " relDebtPath=" + settings.getDebtFilePath());
+                LOG.info("Settings changed: username=" + settings.getUsername() + " relDebtPath=" + settings.getDebtFilePath(project));
                 updateTable();
             }
         });
 
-        // Ensure the file exists is not required to build; keep the reference if needed
-        VirtualFile debtFile = LocalFileSystem.getInstance().findFileByIoFile(debtService.getDebtFile());
-    }
-
-    public void refresh() {
-        if (LOG.isDebugEnabled()) LOG.debug("Refresh requested from toolwindow");
-        updateTable();
+        project.getMessageBus().connect().subscribe(DebtService.TOPIC, new DebtServiceListener() {
+            @Override
+            public void refresh() {
+                if (LOG.isDebugEnabled()) LOG.debug("Refresh requested from toolwindow");
+                updateTable();
+            }
+        });
     }
 
     public JPanel getContent() {
@@ -323,26 +309,38 @@ public class DebtToolWindow {
 
         table.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2) {
                     int viewRow = table.getSelectedRow();
                     if (viewRow >= 0) {
                         int modelRow = table.convertRowIndexToModel(viewRow);
-                        String stored = tableModel.debtItems.get(modelRow).getFile();
-                        int line = tableModel.debtItems.get(modelRow).getLine();
-                        String basePath = project.getBasePath();
+                        DebtItem debtItem = tableModel.debtItems.get(modelRow);
+                        String stored = debtItem.getFile();
+                        int line = debtItem.getLine();
                         String absolutePath = stored;
                         try {
-                            Path p = Paths.get(stored);
-                            if (basePath != null && !p.isAbsolute()) {
-                                absolutePath = Paths.get(basePath).resolve(p).normalize().toString();
+                            Path relPath = Paths.get(stored);
+                            if (relPath.isAbsolute()) {
+                                absolutePath = relPath.toAbsolutePath().normalize().toString();
                             } else {
-                                absolutePath = p.toAbsolutePath().normalize().toString();
+                                final Map<Repository, List<DebtItem>> debtsByRepository = debtService.getDebtsByRepository();
+                                final String repoRoot = debtsByRepository.entrySet()
+                                        .stream()
+                                        .filter(entry -> entry.getValue().contains(debtItem))
+                                        .findFirst()
+                                        .map(Map.Entry::getKey)
+                                        .map(Repository::getRepositoryAbsolutePath)
+                                        .orElseThrow();
+
+                                absolutePath = Paths.get(repoRoot).resolve(relPath).normalize().toString();
                             }
                         } catch (Exception ex) {
-                            if (LOG.isDebugEnabled()) LOG.debug("Failed to resolve path for navigation. stored=" + stored + " basePath=" + basePath + " msg=" + ex.getMessage(), ex);
+                            if (LOG.isDebugEnabled())
+                                LOG.debug("Failed to resolve path for navigation. stored=" + stored + " msg=" + ex.getMessage(), ex);
                         }
-                        if (LOG.isDebugEnabled()) LOG.debug("Navigate request: stored=" + stored + " resolved=" + absolutePath + ":" + line);
+                        if (LOG.isDebugEnabled())
+                            LOG.debug("Navigate request: stored=" + stored + " resolved=" + absolutePath + ":" + line);
+
                         VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(absolutePath);
                         if (virtualFile != null) {
                             OpenFileDescriptor descriptor = new OpenFileDescriptor(project, virtualFile, line - 1, 0);
@@ -358,7 +356,7 @@ public class DebtToolWindow {
         // Bottom buttons panel (export only; refresh moved to toolwindow title bar)
         JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton exportButton = new JButton("Export XLSX");
-        exportButton.addActionListener(e -> exportAllDebtItemsToXlsx());
+        exportButton.addActionListener(e -> exportDebtItemsToXlsx());
         bottomButtons.add(exportButton);
         listPanel.add(bottomButtons, BorderLayout.SOUTH);
 
@@ -419,9 +417,20 @@ public class DebtToolWindow {
 
         // Wire chart filter listeners
         DocumentListener docListenerChart = new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { updateChart(); }
-            @Override public void removeUpdate(DocumentEvent e) { updateChart(); }
-            @Override public void changedUpdate(DocumentEvent e) { updateChart(); }
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateChart();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateChart();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                updateChart();
+            }
         };
         fileFilterChart.getDocument().addDocumentListener(docListenerChart);
         titleFilterChart.getDocument().addDocumentListener(docListenerChart);
@@ -516,7 +525,7 @@ public class DebtToolWindow {
 
         final TreeSet<Integer> wantedLevels = new TreeSet<>(Comparator.naturalOrder());
 
-        for (DebtItem item : debtService.all()) {
+        for (DebtItem item : debtProviderService.currentItems()) {
             tableModel.addDebtItem(item);
             allItems.add(item);
             wantedLevels.add(item.getWantedLevel());
@@ -550,7 +559,8 @@ public class DebtToolWindow {
     private boolean matchesChart(DebtItem it) {
         // Text fields (contains, case-insensitive)
         String fileNeedle = fileFilterChart.getText();
-        if (!(containsIgnoreCase(it.getFile(), fileNeedle) || containsIgnoreCase(getBaseName(it.getFile()), fileNeedle))) return false; // match path or base name
+        if (!(containsIgnoreCase(it.getFile(), fileNeedle) || containsIgnoreCase(getBaseName(it.getFile()), fileNeedle)))
+            return false; // match path or base name
         if (!containsIgnoreCase(it.getTitle(), titleFilterChart.getText())) return false;
         if (!containsIgnoreCase(it.getDescription(), descFilterChart.getText())) return false;
         if (!containsIgnoreCase(it.getUsername(), userFilterChart.getText())) return false;
@@ -558,11 +568,16 @@ public class DebtToolWindow {
         if (!containsIgnoreCase(it.getComment(), commentFilterChart.getText())) return false;
 
         // Multi-select exact matches when any selected
-        if (!wantedLevelFilterChart.getSelected().isEmpty() && !wantedLevelFilterChart.getSelected().contains(it.getWantedLevel())) return false;
-        if (!complexityFilterChart.getSelected().isEmpty() && !complexityFilterChart.getSelected().contains(it.getComplexity())) return false;
-        if (!statusFilterChart.getSelected().isEmpty() && !statusFilterChart.getSelected().contains(it.getStatus())) return false;
-        if (!priorityFilterChart.getSelected().isEmpty() && !priorityFilterChart.getSelected().contains(it.getPriority())) return false;
-        if (!riskFilterChart.getSelected().isEmpty() && !riskFilterChart.getSelected().contains(it.getRisk())) return false;
+        if (!wantedLevelFilterChart.getSelected().isEmpty() && !wantedLevelFilterChart.getSelected().contains(it.getWantedLevel()))
+            return false;
+        if (!complexityFilterChart.getSelected().isEmpty() && !complexityFilterChart.getSelected().contains(it.getComplexity()))
+            return false;
+        if (!statusFilterChart.getSelected().isEmpty() && !statusFilterChart.getSelected().contains(it.getStatus()))
+            return false;
+        if (!priorityFilterChart.getSelected().isEmpty() && !priorityFilterChart.getSelected().contains(it.getPriority()))
+            return false;
+        if (!riskFilterChart.getSelected().isEmpty() && !riskFilterChart.getSelected().contains(it.getRisk()))
+            return false;
 
         return true;
     }
@@ -581,8 +596,8 @@ public class DebtToolWindow {
         return idx >= 0 ? p.substring(idx + 1) : p;
     }
 
-    private void exportAllDebtItemsToXlsx() {
-        List<DebtItem> items = new ArrayList<>(debtService.all());
+    private void exportDebtItemsToXlsx() {
+        List<DebtItem> items = debtProviderService.currentItems();
 
         JFileChooser chooser = new JFileChooser(project.getBasePath());
         chooser.setDialogTitle("Export Debt Items to XLSX");
@@ -617,7 +632,7 @@ public class DebtToolWindow {
             Sheet sheet = workbook.createSheet("Debt Items");
 
             // Header row
-            String[] headers = new String[] {
+            String[] headers = new String[]{
                     "File", "Line", "Title", "Description", "User", "WantedLevel",
                     "Complexity", "Status", "Priority", "Risk", "TargetVersion", "Comment", "CurrentModule"
             };

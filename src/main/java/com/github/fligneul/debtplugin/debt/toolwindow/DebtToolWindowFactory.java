@@ -1,13 +1,14 @@
 package com.github.fligneul.debtplugin.debt.toolwindow;
 
+import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.openapi.wm.ex.ToolWindowEx;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import org.jetbrains.annotations.NotNull;
@@ -27,12 +28,17 @@ public class DebtToolWindowFactory implements ToolWindowFactory {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
                 if (LOG.isDebugEnabled()) LOG.debug("Refresh action invoked from title bar");
-                debtToolWindow.refresh();
+                final DebtService debtService = project.getService(DebtService.class);
+                debtService.refresh();
             }
         };
+
+        // Add a Repositories multi-select filter next to Refresh
+        AnAction reposFilterAction = new RepoFilterComponentAction(project);
+
         if (toolWindow instanceof ToolWindowEx twEx) {
-            if (LOG.isDebugEnabled()) LOG.debug("Setting title bar actions (Refresh)");
-            twEx.setTitleActions(refreshAction);
+            if (LOG.isDebugEnabled()) LOG.debug("Setting title bar actions (Refresh + Repositories filter)");
+            twEx.setTitleActions(refreshAction, reposFilterAction);
         }
     }
 }

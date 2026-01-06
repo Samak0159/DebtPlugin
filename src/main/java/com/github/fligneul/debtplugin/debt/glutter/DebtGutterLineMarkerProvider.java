@@ -2,6 +2,7 @@ package com.github.fligneul.debtplugin.debt.glutter;
 
 import com.github.fligneul.debtplugin.debt.icons.DebtIcons;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
+import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
 import com.intellij.codeInsight.daemon.LineMarkerProvider;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAware {
@@ -50,16 +52,17 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
 
         if (file.getVirtualFile() == null) return null;
         String osPath = file.getVirtualFile().getPath();
-        String basePath = project.getBasePath();
+        String basePath = debtService.findRepoRootForAbsolutePath(osPath);
+        final Map.Entry<Repository, List<DebtItem>> debtsForRepository = debtService.getDebtForRepositoryAbsolutePath(basePath).orElseThrow();
 
         String currentRel = toProjectRelative(osPath, basePath);
         int lineInFile = lineNumber + 1;
         List<DebtItem> debtsOnLine = new ArrayList<>();
-        for (DebtItem d : debtService.all()) {
-            String stored = d.getFile();
+        for (DebtItem debtItem : debtsForRepository.getValue()) {
+            String stored = debtItem.getFile();
             String storedRel = toProjectRelative(stored, basePath);
-            if (storedRel.equalsIgnoreCase(currentRel) && d.getLine() == lineInFile) {
-                debtsOnLine.add(d);
+            if (storedRel.equalsIgnoreCase(currentRel) && debtItem.getLine() == lineInFile) {
+                debtsOnLine.add(debtItem);
             }
         }
         if (debtsOnLine.isEmpty()) return null;
