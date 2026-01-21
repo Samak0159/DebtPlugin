@@ -11,7 +11,6 @@ import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.DebtServiceListener;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettingsListener;
-import com.github.fligneul.debtplugin.debt.toolwindow.ColumnService;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -35,15 +34,24 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.RowFilter;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.TableColumnModelEvent;
+import javax.swing.event.TableColumnModelListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
 import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -55,7 +63,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,6 +78,8 @@ public class DebtToolWindow {
     private final JBTable table;
     private final TableRowSorter<DebtTableModel> sorter;
     private final ModulePieChartPanel pieChartPanel;
+    // Base row height to use as minimum when auto-expanding rows
+    private int defaultRowHeight;
 
     // Cached items for reuse (table and chart)
     private final List<DebtItem> allItems = new ArrayList<>();
@@ -122,10 +131,51 @@ public class DebtToolWindow {
         this.debtProviderService = project.getService(DebtProviderService.class);
         this.columnService = project.getService(ColumnService.class);
         this.tableModel = new DebtTableModel(debtService, columnService);
-        this.table = new JBTable(tableModel);
+        this.table = new JBTable(tableModel) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                // After rendering a cell, ensure the row height accommodates wrapped text in Description/Comment
+                adjustRowHeightFor(row);
+                return c;
+            }
+        };
         this.sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
         this.pieChartPanel = new ModulePieChartPanel();
+
+        // Apply wrapping renderers for text columns
+        applyWrappingRenderers();
+
+        // Re-apply wrapping and adjust heights when columns change (width/visibility/move)
+        table.getColumnModel().addColumnModelListener(new TableColumnModelListener() {
+            @Override
+            public void columnAdded(TableColumnModelEvent e) {
+                applyWrappingRenderers();
+                adjustAllRowsHeight();
+            }
+
+            @Override
+            public void columnRemoved(TableColumnModelEvent e) {
+                applyWrappingRenderers();
+                adjustAllRowsHeight();
+            }
+
+            @Override
+            public void columnMoved(TableColumnModelEvent e) {
+                applyWrappingRenderers();
+                adjustAllRowsHeight();
+            }
+
+            @Override
+            public void columnSelectionChanged(ListSelectionEvent e) {
+            }
+
+            @Override
+            public void columnMarginChanged(ChangeEvent e) {
+                adjustAllRowsHeight();
+            }
+        });
 
         // Configure multi-select enum filters
         complexityFilter.setOptions(Arrays.asList(Complexity.values()));
@@ -210,6 +260,8 @@ public class DebtToolWindow {
 
         // Apply initial visibility from settings and sync selector
         applyColumnVisibilityFromSettings();
+        // Remember the default height as baseline for auto-expansion
+        this.defaultRowHeight = table.getRowHeight();
 
         // Refresh the table automatically when settings change (e.g., username updated)
         project.getMessageBus().connect().subscribe(DebtSettings.TOPIC, new DebtSettingsListener() {
@@ -583,6 +635,8 @@ public class DebtToolWindow {
 
         // Apply filters to table and update chart aggregation
         applyFilters();
+        // Ensure row heights match wrapped content after data refresh
+        adjustAllRowsHeight();
         int visible = table.getRowCount();
         updateChart();
         if (LOG.isDebugEnabled()) {
@@ -595,6 +649,9 @@ public class DebtToolWindow {
             Map<String, Boolean> vis = project.getService(com.github.fligneul.debtplugin.debt.settings.DebtSettings.class).getState().getColumnVisibility();
             columnService.setVisibilityByName(vis);
             columnService.applyTo(table);
+            // Apply wrapping again because columns might have been re-added/removed
+            applyWrappingRenderers();
+            adjustAllRowsHeight();
             // Sync selector selection to currently visible columns
             List<Integer> visible = columnService.getVisibleModelIndices();
             if (visible.size() == tableModel.getColumnCount()) {
@@ -656,6 +713,68 @@ public class DebtToolWindow {
         String p = path.replace('\\', '/');
         int idx = p.lastIndexOf('/');
         return idx >= 0 ? p.substring(idx + 1) : p;
+    }
+
+    private void applyWrappingRenderers() {
+        setWrappingRendererForModelColumn(3);  // Description
+        setWrappingRendererForModelColumn(11); // Comment
+    }
+
+    private void setWrappingRendererForModelColumn(int modelIndex) {
+        int viewIdx = table.convertColumnIndexToView(modelIndex);
+        if (viewIdx < 0) return;
+        table.getColumnModel().getColumn(viewIdx).setCellRenderer(new WrappingTextCellRenderer());
+    }
+
+    private void adjustRowHeightFor(int viewRow) {
+        if (viewRow < 0 || viewRow >= table.getRowCount()) return;
+        int maxHeight = defaultRowHeight > 0 ? defaultRowHeight : table.getRowHeight();
+        maxHeight = Math.max(maxHeight, preferredHeightForCell(viewRow, 3)); // Description
+        maxHeight = Math.max(maxHeight, preferredHeightForCell(viewRow, 11)); // Comment
+        if (maxHeight != table.getRowHeight(viewRow)) {
+            table.setRowHeight(viewRow, maxHeight);
+        }
+    }
+
+    private int preferredHeightForCell(int viewRow, int modelCol) {
+        int viewCol = table.convertColumnIndexToView(modelCol);
+        if (viewCol < 0) return 0;
+        Object value = table.getValueAt(viewRow, viewCol);
+        TableCellRenderer renderer = table.getCellRenderer(viewRow, viewCol);
+        Component component = renderer.getTableCellRendererComponent(table, value, false, false, viewRow, viewCol);
+        int colWidth = table.getColumnModel().getColumn(viewCol).getWidth();
+
+        component.setSize(new Dimension(colWidth, Integer.MAX_VALUE));
+        return Math.max(component.getPreferredSize().height, defaultRowHeight);
+    }
+
+    private void adjustAllRowsHeight() {
+        int rc = table.getRowCount();
+        for (int r = 0; r < rc; r++) adjustRowHeightFor(r);
+    }
+
+    private static class WrappingTextCellRenderer extends JTextArea implements TableCellRenderer {
+        public WrappingTextCellRenderer() {
+            setLineWrap(true);
+            setWrapStyleWord(true);
+            setOpaque(true);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            setText(value == null ? "" : String.valueOf(value));
+            setFont(table.getFont());
+            if (isSelected) {
+                setForeground(table.getSelectionForeground());
+                setBackground(table.getSelectionBackground());
+            } else {
+                setForeground(table.getForeground());
+                setBackground(table.getBackground());
+            }
+            int colWidth = table.getColumnModel().getColumn(column).getWidth();
+            setSize(new Dimension(colWidth, Integer.MAX_VALUE));
+            return this;
+        }
     }
 
     private void exportDebtItemsToXlsx() {
