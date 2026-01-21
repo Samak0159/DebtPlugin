@@ -61,6 +61,18 @@ public class MultiSelectFilter<T> extends JPanel {
         return new LinkedHashSet<>(selected);
     }
 
+    public void setSelected(Collection<T> values) {
+        selected.clear();
+        if (values != null) {
+            for (T v : values) {
+                if (options.contains(v)) selected.add(v);
+            }
+        }
+        updateChecksFromState();
+        updateButtonText();
+        notifyListeners();
+    }
+
     public void clearSelection() {
         selected.clear();
         updateChecksFromState();

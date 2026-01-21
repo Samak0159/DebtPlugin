@@ -14,22 +14,15 @@ import java.util.List;
 public class DebtTableModel extends DefaultTableModel {
     public final List<DebtItem> debtItems = new ArrayList<>();
     private final DebtService debtService;
+    private final ColumnService columnService;
 
-    public DebtTableModel(DebtService debtService) {
+    public DebtTableModel(DebtService debtService, ColumnService columnService) {
         this.debtService = debtService;
-        addColumn("File"); // 0
-        addColumn("Line"); // 1
-        addColumn("Title"); // 2
-        addColumn("Description"); // 3
-        addColumn("User"); // 4
-        addColumn("WantedLevel"); // 5
-        addColumn("Complexity"); // 6
-        addColumn("Status"); // 7
-        addColumn("Priority"); // 8
-        addColumn("Risk"); // 9
-        addColumn("TargetVersion"); // 10
-        addColumn("Comment"); // 11
-        addColumn(""); // 12 action (delete)
+        this.columnService = columnService;
+        for (ColumnService.Column c : this.columnService.getColumns()) {
+            String header = ColumnService.ACTIONS_NAME.equals(c.getName()) ? "" : c.getName();
+            addColumn(header);
+        }
     }
 
     @Override

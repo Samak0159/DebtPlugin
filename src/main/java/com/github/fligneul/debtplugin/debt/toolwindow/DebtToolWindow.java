@@ -11,6 +11,7 @@ import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.DebtServiceListener;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettingsListener;
+import com.github.fligneul.debtplugin.debt.toolwindow.ColumnService;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -54,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,6 +74,10 @@ public class DebtToolWindow {
 
     // Cached items for reuse (table and chart)
     private final List<DebtItem> allItems = new ArrayList<>();
+
+    // Column services and selector
+    private final ColumnService columnService;
+    private final MultiSelectFilter<Integer> columnSelector = new MultiSelectFilter<>("Columns");
 
     // Filter inputs (table tab)
     private final JTextField fileFilter = new JTextField(8);
@@ -114,7 +120,8 @@ public class DebtToolWindow {
         this.project = project;
         this.debtService = project.getService(DebtService.class);
         this.debtProviderService = project.getService(DebtProviderService.class);
-        this.tableModel = new DebtTableModel(debtService);
+        this.columnService = project.getService(ColumnService.class);
+        this.tableModel = new DebtTableModel(debtService, columnService);
         this.table = new JBTable(tableModel);
         this.sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
@@ -198,11 +205,20 @@ public class DebtToolWindow {
         actionCol.setMaxWidth(60);
         actionCol.setMinWidth(44);
 
+        // Capture original TableColumn instances for show/hide later
+        columnService.attachTableColumns(table);
+
+        // Apply initial visibility from settings and sync selector
+        applyColumnVisibilityFromSettings();
+
         // Refresh the table automatically when settings change (e.g., username updated)
         project.getMessageBus().connect().subscribe(DebtSettings.TOPIC, new DebtSettingsListener() {
             @Override
             public void settingsChanged(DebtSettings.State settings) {
                 LOG.info("Settings changed: username=" + settings.getUsername() + " relDebtPath=" + settings.getDebtFilePath(project));
+                // Apply column visibility from settings
+                applyColumnVisibilityFromSettings();
+                // Refresh data
                 updateTable();
             }
         });
@@ -227,6 +243,27 @@ public class DebtToolWindow {
 
         JPanel row1 = new JPanel(new BorderLayout(8, 2));
         row1.add(new JLabel("Filter :"), BorderLayout.WEST);
+
+        // Column selector in the center of the top row
+        // Options are model indices
+        List<Integer> colOptions = new ArrayList<>();
+        for (int i = 0; i < tableModel.getColumnCount(); i++) colOptions.add(i);
+        columnSelector.setOptions(colOptions);
+        columnSelector.setRenderer((Integer idx) -> {
+            String name = tableModel.getColumnName(idx);
+            if (name == null || name.isBlank()) return ColumnService.ACTIONS_NAME;
+            return name;
+        });
+        // Initialize selection reflects current visibility (if all visible -> show All)
+        List<Integer> visible = columnService.getVisibleModelIndices();
+        if (visible.size() == tableModel.getColumnCount()) {
+            columnSelector.clearSelection();
+        } else {
+            columnSelector.setSelected(visible);
+        }
+        columnSelector.addSelectionListener(this::applyColumnSelection);
+        row1.add(columnSelector);
+
         toggleFiltersButton = new JButton("-"); // Expanded state shows "-"
         toggleFiltersButton.addActionListener(e -> {
             filtersCollapsed = !filtersCollapsed;
@@ -496,6 +533,17 @@ public class DebtToolWindow {
         }
     }
 
+    private void applyColumnSelection() {
+        try {
+            Set<Integer> selected = columnSelector.getSelected();
+            // Update service visibility and apply to the table
+            columnService.setVisibleByModelIndexSelection(selected);
+            columnService.applyTo(table);
+        } catch (Exception ex) {
+            if (LOG.isDebugEnabled()) LOG.debug("applyColumnSelection failed: " + ex.getMessage(), ex);
+        }
+    }
+
     private void addTextFilter(List<RowFilter<DebtTableModel, Object>> filters, String text, int column) {
         if (text != null && !text.isBlank()) {
             String expr = "(?i)" + Pattern.quote(text.trim());
@@ -539,6 +587,22 @@ public class DebtToolWindow {
         updateChart();
         if (LOG.isDebugEnabled()) {
             LOG.debug("updateTable completed in " + (System.currentTimeMillis() - start) + " ms. total=" + allItems.size() + " visible=" + visible);
+        }
+    }
+
+    private void applyColumnVisibilityFromSettings() {
+        try {
+            Map<String, Boolean> vis = project.getService(com.github.fligneul.debtplugin.debt.settings.DebtSettings.class).getState().getColumnVisibility();
+            columnService.setVisibilityByName(vis);
+            columnService.applyTo(table);
+            // Sync selector selection to currently visible columns
+            List<Integer> visible = columnService.getVisibleModelIndices();
+            if (visible.size() == tableModel.getColumnCount()) {
+                columnSelector.clearSelection();
+            } else {
+                columnSelector.setSelected(visible);
+            }
+        } catch (Exception ignored) {
         }
     }
 

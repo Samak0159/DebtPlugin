@@ -9,6 +9,7 @@ import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,8 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         public String username = "";
         // Optional per-repository override for JSON path. Key: absolute repo root; Value: absolute path or path relative to repo root.
         public Map<String, String> repoDebtPaths = new HashMap<>();
+        // Column visibility by column display name ("(Actions)" for empty header). true => visible, false => hidden
+        public Map<String, Boolean> columnVisibility = new LinkedHashMap<>();
 
         public State() {
         }
@@ -45,6 +48,14 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
 
         public void setRepoDebtPaths(Map<String, String> repoDebtPaths) {
             this.repoDebtPaths = repoDebtPaths;
+        }
+
+        public Map<String, Boolean> getColumnVisibility() {
+            return columnVisibility;
+        }
+
+        public void setColumnVisibility(Map<String, Boolean> columnVisibility) {
+            this.columnVisibility = columnVisibility;
         }
 
         public String getDebtFilePath(Project project) {
@@ -69,6 +80,9 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         if (myState.repoDebtPaths == null) {
             myState.repoDebtPaths = new HashMap<>();
         }
+        if (myState.columnVisibility == null) {
+            myState.columnVisibility = new LinkedHashMap<>();
+        }
         return myState;
     }
 
@@ -79,6 +93,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
             myState.username = UUID.randomUUID().toString();
         }
         if (myState.repoDebtPaths == null) myState.repoDebtPaths = new HashMap<>();
+        if (myState.columnVisibility == null) myState.columnVisibility = new LinkedHashMap<>();
     }
 
     public String getOrInitUsername() {
