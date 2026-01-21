@@ -1,11 +1,12 @@
 package com.github.fligneul.debtplugin.debt.action;
 
 import com.github.fligneul.debtplugin.debt.model.Complexity;
+import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
-import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.components.JBTextField;
 import org.jetbrains.annotations.Nullable;
@@ -14,6 +15,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -21,8 +23,11 @@ import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import java.awt.Dimension;
+import java.io.File;
 
 public class AddDebtDialog extends DialogWrapper {
+    private final TextFieldWithBrowseButton fileField = new TextFieldWithBrowseButton();
+    private final JSpinner lineSpinner = new JSpinner(new SpinnerNumberModel(1, 1, Integer.MAX_VALUE, 1));
     private final JBTextField titleField = new JBTextField();
     private final JBTextArea descriptionArea = new JBTextArea(4, 40);
     private final JBTextArea commentArea = new JBTextArea(4, 40);
@@ -33,16 +38,11 @@ public class AddDebtDialog extends DialogWrapper {
     private final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
     private final JBTextField targetVersionField = new JBTextField();
 
-    // Row panels to allow toggling visibility
-    private JPanel statusRow;
-    private JPanel priorityRow;
-    private JPanel riskRow;
-    private JPanel targetVersionRow;
-    private JPanel commentRow;
-
     // Whether the dialog is used to edit an existing item (true) or add a new one (false)
-    private boolean isEdit = false;
+    private final boolean isEdit;
 
+    private String filePath = "";
+    private int line = 1;
     private String titleText = "";
     private String description = "";
     private String comment = "";
@@ -54,12 +54,17 @@ public class AddDebtDialog extends DialogWrapper {
     private String targetVersion = "";
     private static final int LABEL_COL_WIDTH = 160;
 
-    public AddDebtDialog() {
+    public AddDebtDialog(String initialFilePath, int initialLine) {
         super(true);
         setTitle("Add New Debt");
+        setResizable(true);
         this.isEdit = false;
+        this.filePath = initialFilePath != null ? initialFilePath : "";
+        this.line = Math.max(1, initialLine);
         init();
-        // Ensure hidden fields still have intended default values when saving
+        // Push initial values into UI controls
+        fileField.setText(this.filePath);
+        lineSpinner.setValue(this.line);
         statusComboBox.setSelectedItem(this.status);
         priorityComboBox.setSelectedItem(this.priority);
         riskComboBox.setSelectedItem(this.risk);
@@ -70,8 +75,11 @@ public class AddDebtDialog extends DialogWrapper {
     public AddDebtDialog(DebtItem item) {
         super(true);
         setTitle("Edit Debt");
+        setResizable(true);
         this.isEdit = true;
         // Pre-fill backing fields so getters have values even if user doesn't change inputs
+        this.filePath = item.getFile();
+        this.line = item.getLine();
         this.titleText = item.getTitle();
         this.description = item.getDescription();
         this.comment = item.getComment();
@@ -83,6 +91,8 @@ public class AddDebtDialog extends DialogWrapper {
         this.targetVersion = item.getTargetVersion();
         init();
         // After components are created in init(), push values into UI controls
+        fileField.setText(item.getFile());
+        lineSpinner.setValue(item.getLine());
         titleField.setText(item.getTitle());
         descriptionArea.setText(item.getDescription());
         commentArea.setText(item.getComment());
@@ -98,6 +108,29 @@ public class AddDebtDialog extends DialogWrapper {
     protected @Nullable JComponent createCenterPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        // File picker using Swing's JFileChooser to open the OS file dialog
+        fileField.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            if (filePath != null && !filePath.isBlank()) {
+                chooser.setSelectedFile(new File(filePath));
+            }
+            int result = chooser.showOpenDialog(panel);
+            if (result == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
+                String chosenPath = chooser.getSelectedFile().getAbsolutePath();
+                fileField.setText(chosenPath);
+            }
+        });
+        final JPanel fileRow = labeled("File:", fileField);
+        fileRow.setVisible(isEdit);
+        panel.add(fileRow);
+
+        // Line number
+        final JPanel lineRow = labeled("Line:", lineSpinner);
+        lineRow.setVisible(isEdit);
+        panel.add(lineRow);
+
         panel.add(labeled("Title:", titleField));
 
         JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
@@ -105,32 +138,32 @@ public class AddDebtDialog extends DialogWrapper {
         descriptionArea.setWrapStyleWord(true);
         panel.add(labeled("Description:", descriptionScroll));
 
-        JScrollPane commentScroll = new JScrollPane(commentArea);
-        commentArea.setLineWrap(true);
-        commentArea.setWrapStyleWord(true);
-
         panel.add(labeled("Wanted Level (1-5):", wantedLevelSpinner));
         panel.add(labeled("Complexity:", complexityComboBox));
 
-        // Rows whose visibility depends on add vs edit mode
-        statusRow = labeled("Status:", statusComboBox);
-        priorityRow = labeled("Priority:", priorityComboBox);
-        riskRow = labeled("Risk:", riskComboBox);
-        targetVersionRow = labeled("Target Version:", targetVersionField);
-        commentRow = labeled("Comment:", commentScroll);
 
-        // Hide them when adding (isEdit == false); still keeps component values for saving
-        boolean showAdvanced = isEdit;
-        statusRow.setVisible(showAdvanced);
-        priorityRow.setVisible(showAdvanced);
-        riskRow.setVisible(showAdvanced);
-        targetVersionRow.setVisible(showAdvanced);
-        commentRow.setVisible(showAdvanced);
-
+        // Row panels to allow toggling visibility
+        final JPanel statusRow = labeled("Status:", statusComboBox);
+        statusRow.setVisible(isEdit);
         panel.add(statusRow);
+
+        final JPanel priorityRow = labeled("Priority:", priorityComboBox);
+        priorityRow.setVisible(isEdit);
         panel.add(priorityRow);
+
+        final JPanel riskRow = labeled("Risk:", riskComboBox);
+        riskRow.setVisible(isEdit);
         panel.add(riskRow);
+
+        final JPanel targetVersionRow = labeled("Target Version:", targetVersionField);
+        targetVersionRow.setVisible(isEdit);
         panel.add(targetVersionRow);
+
+        JScrollPane commentScroll = new JScrollPane(commentArea);
+        commentArea.setLineWrap(true);
+        commentArea.setWrapStyleWord(true);
+        final JPanel commentRow = labeled("Comment:", commentScroll);
+        commentRow.setVisible(isEdit);
         panel.add(commentRow);
 
         return panel;
@@ -149,10 +182,18 @@ public class AddDebtDialog extends DialogWrapper {
         jLabel.setMinimumSize(labelSize);
         jLabel.setMaximumSize(new Dimension(LABEL_COL_WIDTH, Integer.MAX_VALUE));
 
-        // Let input control stretch to fill remaining width
+        // Let input control stretch to fill remaining width; allow text areas (inside JScrollPane) to grow vertically
         Dimension compPref = comp.getPreferredSize();
-        comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, compPref != null ? compPref.height : Integer.MAX_VALUE));
+        boolean isScrollableText = (comp instanceof JScrollPane) || (comp instanceof JBTextArea);
+        if (isScrollableText) {
+            comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        } else {
+            comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, compPref != null ? compPref.height : Integer.MAX_VALUE));
+        }
         comp.setAlignmentX(0f);
+
+        // Allow the row itself to expand vertically when its child can
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         row.add(jLabel);
         row.add(Box.createHorizontalStrut(8));
@@ -162,6 +203,9 @@ public class AddDebtDialog extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
+        this.filePath = fileField.getText() != null ? fileField.getText().trim() : "";
+        Object ln = lineSpinner.getValue();
+        this.line = (ln instanceof Number) ? Math.max(1, ((Number) ln).intValue()) : 1;
         this.titleText = titleField.getText();
         this.description = descriptionArea.getText();
         this.comment = commentArea.getText();
@@ -173,6 +217,14 @@ public class AddDebtDialog extends DialogWrapper {
         this.risk = (Risk) riskComboBox.getSelectedItem();
         this.targetVersion = targetVersionField.getText();
         super.doOKAction();
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public int getLine() {
+        return line;
     }
 
     public String getTitleText() {

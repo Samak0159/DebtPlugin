@@ -1,5 +1,6 @@
 package com.github.fligneul.debtplugin.debt.toolwindow;
 
+import com.github.fligneul.debtplugin.debt.action.AddDebtAction;
 import com.github.fligneul.debtplugin.debt.action.AddDebtDialog;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
@@ -213,6 +214,8 @@ public class DebtToolWindow {
                 AddDebtDialog dialog = new AddDebtDialog(oldItem);
                 if (dialog.showAndGet()) {
                     DebtItem newItem = oldItem.toBuilder()
+                            .withFile(dialog.getFilePath())
+                            .withLine(dialog.getLine())
                             .withTitle(dialog.getTitleText())
                             .withDescription(dialog.getDescription())
                             .withWantedLevel(dialog.getWantedLevel())
@@ -222,6 +225,7 @@ public class DebtToolWindow {
                             .withRisk(dialog.getRisk())
                             .withTargetVersion(dialog.getTargetVersion())
                             .withComment(dialog.getComment())
+                            .withCurrentModule(DebtService.resolveCurrentModule(dialog.getFilePath(), project.getBasePath()))
                             .build();
 
                     LOG.info("Edit confirmed: file=" + newItem.getFile() + ":" + newItem.getLine() +

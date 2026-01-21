@@ -32,12 +32,17 @@ public class AddDebtAction extends AnAction {
         VirtualFile file = e.getData(CommonDataKeys.VIRTUAL_FILE);
         if (file == null) return;
 
-        AddDebtDialog dialog = new AddDebtDialog();
+        // Prefill dialog with current file and line
+        String initialPath = file.getPath();
+        int initialLine = editor.getCaretModel().getLogicalPosition().line + 1;
+        AddDebtDialog dialog = new AddDebtDialog(initialPath, initialLine);
         if (dialog.showAndGet()) {
             DebtService debtService = project.getService(DebtService.class);
             DebtSettings settings = project.getService(DebtSettings.class);
             String username = settings.getOrInitUsername();
-            String absolute = file.getPath();
+
+            // Resolve file path chosen by user; fall back to initial if blank
+            String absolute = dialog.getFilePath() != null && !dialog.getFilePath().isBlank() ? dialog.getFilePath() : initialPath;
             // Determine the repository root and store repo-relative path
             DebtService ds = project.getService(DebtService.class);
             String repoRoot = ds.findRepoRootForAbsolutePath(absolute);
@@ -45,7 +50,7 @@ public class AddDebtAction extends AnAction {
 
             final DebtItem debtItem = DebtItem.newBuilder()
                     .withFile(storedPath)
-                    .withLine(editor.getCaretModel().getLogicalPosition().line + 1)
+                    .withLine(Math.max(1, dialog.getLine()))
                     .withTitle(dialog.getTitleText())
                     .withDescription(dialog.getDescription())
                     .withUsername(username)
@@ -56,7 +61,7 @@ public class AddDebtAction extends AnAction {
                     .withRisk(dialog.getRisk())
                     .withTargetVersion(dialog.getTargetVersion())
                     .withComment(dialog.getComment())
-                    .withCurrentModule(resolveCurrentModule(file.getPath(), project.getBasePath()))
+                    .withCurrentModule(DebtService.resolveCurrentModule(absolute, project.getBasePath()))
                     .build();
 
             LOG.info("Add debt confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
@@ -78,64 +83,5 @@ public class AddDebtAction extends AnAction {
     @Override
     public ActionUpdateThread getActionUpdateThread() {
         return ActionUpdateThread.BGT;
-    }
-
-    private static String resolveCurrentModule(String filePath, String projectBasePath) {
-        try {
-            Path start = Paths.get(filePath).toAbsolutePath();
-            Path root = projectBasePath != null ? Paths.get(projectBasePath).toAbsolutePath() : start.getRoot();
-            Path dir = start.getParent();
-            while (dir != null) {
-                File pom = dir.resolve("pom.xml").toFile();
-                if (pom.exists()) {
-                    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-                    dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-                    dbf.setNamespaceAware(false);
-                    DocumentBuilder db = dbf.newDocumentBuilder();
-                    Document doc = db.parse(pom);
-                    Element project = doc.getDocumentElement();
-                    if (project != null) {
-                        // Read only direct children to avoid picking values from <parent>
-                        String artifactId = textOfDirectChild(project, "artifactId");
-                        String groupId = textOfDirectChild(project, "groupId");
-                        if (groupId == null || groupId.isBlank()) {
-                            var parents = project.getElementsByTagName("parent");
-                            if (parents.getLength() > 0) {
-                                Element parent = (Element) parents.item(0);
-                                String parentGroupId = textOfDirectChild(parent, "groupId");
-                                if (parentGroupId != null && !parentGroupId.isBlank()) {
-                                    groupId = parentGroupId;
-                                }
-                            }
-                        }
-                        if (artifactId != null && !artifactId.isBlank()) {
-                            if (groupId != null && !groupId.isBlank()) {
-                                return groupId + ":" + artifactId;
-                            } else {
-                                return artifactId;
-                            }
-                        }
-                    }
-                    // found a pom, stop searching upwards regardless
-                    break;
-                }
-                if (dir.equals(root)) break;
-                dir = dir.getParent();
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
-    }
-
-    private static String textOfDirectChild(Element parent, String tag) {
-        for (org.w3c.dom.Node n = parent.getFirstChild(); n != null; n = n.getNextSibling()) {
-            if (n.getNodeType() == org.w3c.dom.Node.ELEMENT_NODE) {
-                Element e = (Element) n;
-                if (tag.equals(e.getTagName())) {
-                    return e.getTextContent();
-                }
-            }
-        }
-        return null;
     }
 }
