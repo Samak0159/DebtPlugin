@@ -1,10 +1,10 @@
 package com.github.fligneul.debtplugin.debt.toolwindow;
 
+import com.github.fligneul.debtplugin.debt.model.Complexity;
+import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
-import com.github.fligneul.debtplugin.debt.model.Complexity;
-import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 
 import javax.swing.table.DefaultTableModel;
@@ -57,140 +57,50 @@ public class DebtTableModel extends DefaultTableModel {
         DebtItem oldDebtItem = debtItems.get(row);
         DebtItem updatedDebtItem;
         switch (column) {
-            case 2 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    (String) aValue, // title
-                    oldDebtItem.getDescription(),
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    oldDebtItem.getComplexity(),
-                    oldDebtItem.getStatus(),
-                    oldDebtItem.getPriority(),
-                    oldDebtItem.getRisk(),
-                    oldDebtItem.getTargetVersion(),
-                    oldDebtItem.getComment()
-            );
-            case 3 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    oldDebtItem.getTitle(),
-                    (String) aValue, // description
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    oldDebtItem.getComplexity(),
-                    oldDebtItem.getStatus(),
-                    oldDebtItem.getPriority(),
-                    oldDebtItem.getRisk(),
-                    oldDebtItem.getTargetVersion(),
-                    oldDebtItem.getComment()
-            );
+            case 2 -> updatedDebtItem = oldDebtItem.toBuilder()
+                    .withTitle((String) aValue)
+                    .build();
+            case 3 -> updatedDebtItem =
+                    oldDebtItem.toBuilder()
+                            .withDescription((String) aValue)
+                            .build();
             case 5 -> {
                 int asInt;
                 if (aValue instanceof Number n) asInt = n.intValue();
                 else if (aValue instanceof String s) {
-                    try { asInt = Integer.parseInt(s); } catch (NumberFormatException ex) { asInt = oldDebtItem.getWantedLevel(); }
+                    try {
+                        asInt = Integer.parseInt(s);
+                    } catch (NumberFormatException ex) {
+                        asInt = oldDebtItem.getWantedLevel();
+                    }
                 } else asInt = oldDebtItem.getWantedLevel();
                 // Clamp to [1..5]
                 int clamped = Math.max(1, Math.min(5, asInt));
-                updatedDebtItem = new DebtItem(
-                        oldDebtItem.getFile(), oldDebtItem.getLine(),
-                        oldDebtItem.getTitle(),
-                        oldDebtItem.getDescription(),
-                        oldDebtItem.getUsername(),
-                        clamped,
-                        oldDebtItem.getComplexity(),
-                        oldDebtItem.getStatus(),
-                        oldDebtItem.getPriority(),
-                        oldDebtItem.getRisk(),
-                        oldDebtItem.getTargetVersion(),
-                        oldDebtItem.getComment()
-                );
+                updatedDebtItem = oldDebtItem.toBuilder()
+                        .withWantedLevel(clamped)
+                        .build();
                 // Also reflect the clamped value in the table model
                 aValue = clamped;
             }
-            case 6 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    oldDebtItem.getTitle(),
-                    oldDebtItem.getDescription(),
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    (Complexity) aValue,
-                    oldDebtItem.getStatus(),
-                    oldDebtItem.getPriority(),
-                    oldDebtItem.getRisk(),
-                    oldDebtItem.getTargetVersion(),
-                    oldDebtItem.getComment()
-            );
-            case 7 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    oldDebtItem.getTitle(),
-                    oldDebtItem.getDescription(),
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    oldDebtItem.getComplexity(),
-                    (Status) aValue,
-                    oldDebtItem.getPriority(),
-                    oldDebtItem.getRisk(),
-                    oldDebtItem.getTargetVersion(),
-                    oldDebtItem.getComment()
-            );
-            case 8 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    oldDebtItem.getTitle(),
-                    oldDebtItem.getDescription(),
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    oldDebtItem.getComplexity(),
-                    oldDebtItem.getStatus(),
-                    (Priority) aValue,
-                    oldDebtItem.getRisk(),
-                    oldDebtItem.getTargetVersion(),
-                    oldDebtItem.getComment()
-            );
-            case 9 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    oldDebtItem.getTitle(),
-                    oldDebtItem.getDescription(),
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    oldDebtItem.getComplexity(),
-                    oldDebtItem.getStatus(),
-                    oldDebtItem.getPriority(),
-                    (Risk) aValue,
-                    oldDebtItem.getTargetVersion(),
-                    oldDebtItem.getComment()
-            );
-            case 10 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    oldDebtItem.getTitle(),
-                    oldDebtItem.getDescription(),
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    oldDebtItem.getComplexity(),
-                    oldDebtItem.getStatus(),
-                    oldDebtItem.getPriority(),
-                    oldDebtItem.getRisk(),
-                    (String) aValue, // targetVersion
-                    oldDebtItem.getComment()
-            );
-            case 11 -> updatedDebtItem = new DebtItem(
-                    oldDebtItem.getFile(), oldDebtItem.getLine(),
-                    oldDebtItem.getTitle(),
-                    oldDebtItem.getDescription(),
-                    oldDebtItem.getUsername(),
-                    oldDebtItem.getWantedLevel(),
-                    oldDebtItem.getComplexity(),
-                    oldDebtItem.getStatus(),
-                    oldDebtItem.getPriority(),
-                    oldDebtItem.getRisk(),
-                    oldDebtItem.getTargetVersion(),
-                    (String) aValue // comment
-            );
+            case 6 -> updatedDebtItem = oldDebtItem.toBuilder()
+                    .withComplexity((Complexity) aValue)
+                    .build();
+            case 7 -> updatedDebtItem = oldDebtItem.toBuilder()
+                    .withStatus((Status) aValue)
+                    .build();
+            case 8 -> updatedDebtItem = oldDebtItem.toBuilder()
+                    .withPriority((Priority) aValue)
+                    .build();
+            case 9 -> updatedDebtItem = oldDebtItem.toBuilder()
+                    .withRisk((Risk) aValue)
+                    .build();
+            case 10 -> updatedDebtItem = oldDebtItem.toBuilder()
+                    .withTargetVersion((String) aValue)
+                    .build();
+            case 11 -> updatedDebtItem = oldDebtItem.toBuilder()
+                    .withComment((String) aValue)
+                    .build();
             default -> updatedDebtItem = oldDebtItem;
-        }
-
-        // Preserve non-editable metadata
-        if (updatedDebtItem != oldDebtItem) {
-            updatedDebtItem.setCurrentModule(oldDebtItem.getCurrentModule());
         }
 
         if (!updatedDebtItem.equals(oldDebtItem)) {

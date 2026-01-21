@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 
 public class AddDebtAction extends AnAction {
     private static final Logger LOG = Logger.getInstance(AddDebtAction.class);
+
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
@@ -37,29 +38,27 @@ public class AddDebtAction extends AnAction {
             DebtSettings settings = project.getService(DebtSettings.class);
             String username = settings.getOrInitUsername();
             String absolute = file.getPath();
-            // Determine repository root and store repo-relative path
+            // Determine the repository root and store repo-relative path
             DebtService ds = project.getService(DebtService.class);
             String repoRoot = ds.findRepoRootForAbsolutePath(absolute);
             String storedPath = repoRoot.isEmpty() ? absolute : ds.toRepoRelative(absolute, repoRoot);
-            DebtItem debtItem = new DebtItem(
-                    storedPath,
-                    editor.getCaretModel().getLogicalPosition().line + 1,
-                    dialog.getTitleText(),
-                    dialog.getDescription(),
-                    username,
-                    dialog.getWantedLevel(),
-                    dialog.getComplexity(),
-                    dialog.getStatus(),
-                    dialog.getPriority(),
-                    dialog.getRisk(),
-                    dialog.getTargetVersion(),
-                    dialog.getComment()
-            );
-            String currentModule = resolveCurrentModule(file.getPath(), project.getBasePath());
-            if (currentModule != null) {
-                debtItem.setCurrentModule(currentModule);
-                if (LOG.isDebugEnabled()) LOG.debug("Resolved currentModule=" + currentModule + " for file=" + file.getPath());
-            }
+
+            final DebtItem debtItem = DebtItem.newBuilder()
+                    .withFile(storedPath)
+                    .withLine(editor.getCaretModel().getLogicalPosition().line + 1)
+                    .withTitle(dialog.getTitleText())
+                    .withDescription(dialog.getDescription())
+                    .withUsername(username)
+                    .withWantedLevel(dialog.getWantedLevel())
+                    .withComplexity(dialog.getComplexity())
+                    .withStatus(dialog.getStatus())
+                    .withPriority(dialog.getPriority())
+                    .withRisk(dialog.getRisk())
+                    .withTargetVersion(dialog.getTargetVersion())
+                    .withComment(dialog.getComment())
+                    .withCurrentModule(resolveCurrentModule(file.getPath(), project.getBasePath()))
+                    .build();
+
             LOG.info("Add debt confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
                     " title=\"" + debtItem.getTitle() + "\"" +
                     " user=" + debtItem.getUsername());

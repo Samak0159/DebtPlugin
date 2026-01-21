@@ -119,31 +119,21 @@ public final class DebtVfsListener implements BulkFileListener {
             }
 
             if (oldItem != null) {
-                final DebtItem clone = oldItem.clone();
+                final DebtItem updated = oldItem
+                        .toBuilder()
+                        .withFile(newRel)
+                        .build();
 
-                clone.setFile(newRel);
-
-                service.add(clone, newRepoRoot);
+                service.add(updated, newRepoRoot);
             }
         }
     }
 
     private void applyFileUpdate(final Map.Entry<Repository, List<DebtItem>> debtsForRepository, DebtService service, DebtItem oldItem, String newFile) {
-        DebtItem updated = new DebtItem(
-                newFile,
-                oldItem.getLine(),
-                oldItem.getTitle(),
-                oldItem.getDescription(),
-                oldItem.getUsername(),
-                oldItem.getWantedLevel(),
-                oldItem.getComplexity(),
-                oldItem.getStatus(),
-                oldItem.getPriority(),
-                oldItem.getRisk(),
-                oldItem.getTargetVersion(),
-                oldItem.getComment()
-        );
-        updated.setCurrentModule(oldItem.getCurrentModule());
+        final DebtItem updated = oldItem.toBuilder()
+                .withFile(newFile)
+                .build();
+
         service.update(debtsForRepository, oldItem, updated);
     }
 

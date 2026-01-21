@@ -5,20 +5,20 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 
 public class DebtItem {
-    private String file;
-    private int line;
-    private String title;
-    private String description;
-    private String username;
-    private int wantedLevel;
-    private Complexity complexity;
-    private Status status;
-    private Priority priority;
-    private Risk risk;
-    private String targetVersion;
-    private String comment;
+    private final String file;
+    private final int line;
+    private final String title;
+    private final String description;
+    private final String username;
+    private final int wantedLevel;
+    private final Complexity complexity;
+    private final Status status;
+    private final Priority priority;
+    private final Risk risk;
+    private final String targetVersion;
+    private final String comment;
     // Maven current module identifier (groupId:artifactId). Empty when unknown.
-    private String currentModule;
+    private final String currentModule;
 
     // No-args constructor for serializers (e.g., Gson)
     public DebtItem() {
@@ -37,32 +37,28 @@ public class DebtItem {
         this.currentModule = "";
     }
 
-    public DebtItem(
-            @NotNull String file,
-            int line,
-            @NotNull String title,
-            @NotNull String description,
-            @NotNull String username,
-            int wantedLevel,
-            @NotNull Complexity complexity,
-            @NotNull Status status,
-            @NotNull Priority priority,
-            @NotNull Risk risk,
-            @NotNull String targetVersion,
-            @NotNull String comment
-    ) {
-        this.file = Objects.requireNonNull(file, "file");
-        this.line = line;
-        this.title = Objects.requireNonNull(title, "title");
-        this.description = Objects.requireNonNull(description, "description");
-        this.username = Objects.requireNonNull(username, "username");
-        this.wantedLevel = wantedLevel;
-        this.complexity = Objects.requireNonNull(complexity, "complexity");
-        this.status = Objects.requireNonNull(status, "status");
-        this.priority = Objects.requireNonNull(priority, "priority");
-        this.risk = Objects.requireNonNull(risk, "risk");
-        this.targetVersion = Objects.requireNonNull(targetVersion, "targetVersion");
-        this.comment = Objects.requireNonNull(comment, "comment");
+    private DebtItem(final Builder builder) {
+        this.file = Objects.requireNonNull(builder.file, "file");
+        this.line = builder.line;
+        this.title = Objects.requireNonNull(builder.title, "title");
+        this.description = Objects.requireNonNull(builder.description, "description");
+        this.username = Objects.requireNonNull(builder.username, "username");
+        this.wantedLevel = builder.wantedLevel;
+        this.complexity = Objects.requireNonNull(builder.complexity, "complexity");
+        this.status = Objects.requireNonNull(builder.status, "status");
+        this.priority = Objects.requireNonNull(builder.priority, "priority");
+        this.risk = Objects.requireNonNull(builder.risk, "risk");
+        this.targetVersion = Objects.requireNonNull(builder.targetVersion, "targetVersion");
+        this.comment = Objects.requireNonNull(builder.comment, "comment");
+        this.currentModule = builder.currentModule;
+    }
+
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    public Builder toBuilder() {
+        return new Builder(this);
     }
 
     @NotNull
@@ -70,16 +66,8 @@ public class DebtItem {
         return file;
     }
 
-    public void setFile(@NotNull String file) {
-        this.file = file;
-    }
-
     public int getLine() {
         return line;
-    }
-
-    public void setLine(int line) {
-        this.line = line;
     }
 
     @NotNull
@@ -87,17 +75,9 @@ public class DebtItem {
         return title;
     }
 
-    public void setTitle(@NotNull String title) {
-        this.title = title;
-    }
-
     @NotNull
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(@NotNull String description) {
-        this.description = description;
     }
 
     @NotNull
@@ -105,16 +85,8 @@ public class DebtItem {
         return username;
     }
 
-    public void setUsername(@NotNull String username) {
-        this.username = username;
-    }
-
     public int getWantedLevel() {
         return wantedLevel;
-    }
-
-    public void setWantedLevel(int wantedLevel) {
-        this.wantedLevel = wantedLevel;
     }
 
     @NotNull
@@ -122,17 +94,9 @@ public class DebtItem {
         return complexity;
     }
 
-    public void setComplexity(@NotNull Complexity complexity) {
-        this.complexity = complexity;
-    }
-
     @NotNull
     public Status getStatus() {
         return status;
-    }
-
-    public void setStatus(@NotNull Status status) {
-        this.status = status;
     }
 
     @NotNull
@@ -140,17 +104,9 @@ public class DebtItem {
         return priority;
     }
 
-    public void setPriority(@NotNull Priority priority) {
-        this.priority = priority;
-    }
-
     @NotNull
     public Risk getRisk() {
         return risk;
-    }
-
-    public void setRisk(@NotNull Risk risk) {
-        this.risk = risk;
     }
 
     @NotNull
@@ -158,26 +114,14 @@ public class DebtItem {
         return targetVersion;
     }
 
-    public void setTargetVersion(@NotNull String targetVersion) {
-        this.targetVersion = targetVersion;
-    }
-
     @NotNull
     public String getComment() {
         return comment;
     }
 
-    public void setComment(@NotNull String comment) {
-        this.comment = comment;
-    }
-
     @NotNull
     public String getCurrentModule() {
         return currentModule;
-    }
-
-    public void setCurrentModule(@NotNull String moduleParent) {
-        this.currentModule = moduleParent;
     }
 
     @Override
@@ -217,24 +161,107 @@ public class DebtItem {
                 '}';
     }
 
-    @Override
-    public DebtItem clone() {
-        final DebtItem clone = new DebtItem(
-                this.getFile(),
-                this.getLine(),
-                this.getTitle(),
-                this.getDescription(),
-                this.getUsername(),
-                this.getWantedLevel(),
-                this.getComplexity(),
-                this.getStatus(),
-                this.getPriority(),
-                this.getRisk(),
-                this.getTargetVersion(),
-                this.getComment()
-        );
-        clone.setCurrentModule(this.getCurrentModule());
+    public static class Builder {
+        private String file;
+        private int line;
+        private String title;
+        private String description;
+        private String username;
+        private int wantedLevel;
+        private Complexity complexity;
+        private Status status;
+        private Priority priority;
+        private Risk risk;
+        private String targetVersion;
+        private String comment;
+        private String currentModule;
 
-        return clone;
+        public Builder() {
+        }
+
+        public Builder(DebtItem item) {
+            this.file = item.file;
+            this.line = item.line;
+            this.title = item.title;
+            this.description = item.description;
+            this.username = item.username;
+            this.wantedLevel = item.wantedLevel;
+            this.complexity = item.complexity;
+            this.status = item.status;
+            this.priority = item.priority;
+            this.risk = item.risk;
+            this.targetVersion = item.targetVersion;
+            this.comment = item.comment;
+            this.currentModule = item.currentModule;
+        }
+
+        public Builder withFile(final String file) {
+            this.file = file;
+            return this;
+        }
+
+        public Builder withLine(final int line) {
+            this.line = line;
+            return this;
+        }
+
+        public Builder withTitle(final String title) {
+            this.title = title;
+            return this;
+        }
+
+        public Builder withDescription(final String description) {
+            this.description = description;
+            return this;
+        }
+
+        public Builder withUsername(final String username) {
+            this.username = username;
+            return this;
+        }
+
+        public Builder withWantedLevel(final int wantedLevel) {
+            this.wantedLevel = wantedLevel;
+            return this;
+        }
+
+        public Builder withComplexity(final Complexity complexity) {
+            this.complexity = complexity;
+            return this;
+        }
+
+        public Builder withStatus(final Status status) {
+            this.status = status;
+            return this;
+        }
+
+        public Builder withPriority(final Priority priority) {
+            this.priority = priority;
+            return this;
+        }
+
+        public Builder withRisk(final Risk risk) {
+            this.risk = risk;
+            return this;
+        }
+
+        public Builder withTargetVersion(final String targetVersion) {
+            this.targetVersion = targetVersion;
+            return this;
+        }
+
+        public Builder withComment(final String comment) {
+            this.comment = comment;
+            return this;
+        }
+
+        public Builder withCurrentModule(final String currentModule) {
+            this.currentModule = currentModule;
+            return this;
+        }
+
+        public DebtItem build() {
+            return new DebtItem(this);
+        }
     }
 }

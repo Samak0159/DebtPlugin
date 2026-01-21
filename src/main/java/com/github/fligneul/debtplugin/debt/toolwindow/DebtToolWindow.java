@@ -155,27 +155,25 @@ public class DebtToolWindow {
                 // Open dialog pre-filled with selected item
                 AddDebtDialog dialog = new AddDebtDialog(oldItem);
                 if (dialog.showAndGet()) {
-                    DebtItem newItem = new DebtItem(
-                            oldItem.getFile(),
-                            oldItem.getLine(),
-                            dialog.getTitleText(),
-                            dialog.getDescription(),
-                            oldItem.getUsername(),
-                            dialog.getWantedLevel(),
-                            dialog.getComplexity(),
-                            dialog.getStatus(),
-                            dialog.getPriority(),
-                            dialog.getRisk(),
-                            dialog.getTargetVersion(),
-                            dialog.getComment()
-                    );
-                    newItem.setCurrentModule(oldItem.getCurrentModule());
+                    DebtItem newItem = oldItem.toBuilder()
+                            .withTitle(dialog.getTitleText())
+                            .withDescription(dialog.getDescription())
+                            .withWantedLevel(dialog.getWantedLevel())
+                            .withComplexity(dialog.getComplexity())
+                            .withStatus(dialog.getStatus())
+                            .withPriority(dialog.getPriority())
+                            .withRisk(dialog.getRisk())
+                            .withTargetVersion(dialog.getTargetVersion())
+                            .withComment(dialog.getComment())
+                            .build();
+
                     LOG.info("Edit confirmed: file=" + newItem.getFile() + ":" + newItem.getLine() +
                             " title=\"" + oldItem.getTitle() + "\" -> \"" + newItem.getTitle() + "\"" +
                             " desc=\"" + oldItem.getDescription() + "\" -> \"" + newItem.getDescription() + "\"" +
                             " user=" + newItem.getUsername() +
                             " targetVersion=\"" + oldItem.getTargetVersion() + "\" -> \"" + newItem.getTargetVersion() + "\"" +
                             " comment=\"" + oldItem.getComment() + "\" -> \"" + newItem.getComment() + "\"");
+
                     debtService.update(oldItem, newItem);
                     updateTable();
                 } else {

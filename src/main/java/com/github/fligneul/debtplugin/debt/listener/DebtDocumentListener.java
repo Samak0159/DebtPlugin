@@ -103,21 +103,10 @@ public final class DebtDocumentListener implements DocumentListener {
     }
 
     private static void applyLineUpdate(DebtService service, DebtItem oldItem, int newLine) {
-        DebtItem updated = new DebtItem(
-                oldItem.getFile(),
-                newLine,
-                oldItem.getTitle(),
-                oldItem.getDescription(),
-                oldItem.getUsername(),
-                oldItem.getWantedLevel(),
-                oldItem.getComplexity(),
-                oldItem.getStatus(),
-                oldItem.getPriority(),
-                oldItem.getRisk(),
-                oldItem.getTargetVersion(),
-                oldItem.getComment()
-        );
-        updated.setCurrentModule(oldItem.getCurrentModule());
+        final DebtItem updated = oldItem.toBuilder()
+                .withLine(newLine)
+                .build();
+
         service.update(oldItem, updated);
     }
 

@@ -222,21 +222,10 @@ public final class DebtService {
             for (int i = 0; i < debts.size(); i++) {
                 DebtItem debtItem = debts.get(i);
                 if (oldUsername.equals(debtItem.getUsername())) {
-                    DebtItem updated = new DebtItem(
-                            debtItem.getFile(),
-                            debtItem.getLine(),
-                            debtItem.getTitle(),
-                            debtItem.getDescription(),
-                            newUsername,
-                            debtItem.getWantedLevel(),
-                            debtItem.getComplexity(),
-                            debtItem.getStatus(),
-                            debtItem.getPriority(),
-                            debtItem.getRisk(),
-                            debtItem.getTargetVersion(),
-                            debtItem.getComment()
-                    );
-                    updated.setCurrentModule(debtItem.getCurrentModule());
+                    final DebtItem updated = debtItem.toBuilder()
+                            .withUsername(newUsername)
+                            .build();
+
                     debts.set(i, updated);
                     changedCount++;
                 }
@@ -483,27 +472,27 @@ public final class DebtService {
             String targetVersion = getAsString(obj, "targetVersion", "");
             String comment = getAsString(obj, "comment", "");
 
-            DebtItem item = new DebtItem(
-                    file,
-                    line,
-                    title,
-                    description,
-                    username,
-                    wantedLevel,
-                    complexity,
-                    status,
-                    priority,
-                    risk,
-                    targetVersion,
-                    comment
-            );
             // Optional, backward-compatible: prefer currentModule, fallback to legacy moduleParent
             String currentModule = getAsString(obj, "currentModule", null);
             if (currentModule == null || currentModule.isBlank()) {
                 currentModule = getAsString(obj, "moduleParent", "");
             }
-            if (currentModule != null) item.setCurrentModule(currentModule);
-            return item;
+
+            return DebtItem.newBuilder()
+                    .withFile(file)
+                    .withLine(line)
+                    .withTitle(title)
+                    .withDescription(description)
+                    .withUsername(username)
+                    .withWantedLevel(wantedLevel)
+                    .withComplexity(complexity)
+                    .withStatus(status)
+                    .withPriority(priority)
+                    .withRisk(risk)
+                    .withTargetVersion(targetVersion)
+                    .withComment(comment)
+                    .withCurrentModule(currentModule)
+                    .build();
         }
 
         private static String getAsString(JsonObject obj, String key, String def) {
