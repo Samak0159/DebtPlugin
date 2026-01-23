@@ -9,6 +9,7 @@ import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
+import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializationContext;
@@ -461,6 +462,11 @@ public final class DebtService {
         @Override
         public DebtItem deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject obj = json.getAsJsonObject();
+
+            // New fields (backward compatible)
+            String id = getAsString(obj, "id", null);
+
+            // Core fields
             String file = getAsString(obj, "file", "");
             int line = getAsInt(obj, "line", 1);
             String title = getAsString(obj, "title", "");
@@ -482,7 +488,43 @@ public final class DebtService {
                 currentModule = getAsString(obj, "moduleParent", "");
             }
 
-            return DebtItem.newBuilder()
+            // Parse links map if present (new format: Map<String, List<Relationship>>)
+            Map<String, Relationship> links = new LinkedHashMap<>();
+            JsonElement linksEl = obj.get("links");
+            if (linksEl != null && linksEl.isJsonObject()) {
+                for (Map.Entry<String, JsonElement> e : linksEl.getAsJsonObject().entrySet()) {
+                    String key = e.getKey();
+                    JsonElement val = e.getValue();
+                    try {
+                        Relationship relationship = null;
+                        if (val != null && !val.isJsonNull()) {
+                            if (val.isJsonArray()) {
+                                for (JsonElement el : val.getAsJsonArray()) {
+                                    try {
+                                        if (el != null && !el.isJsonNull()) {
+                                            relationship = Relationship.valueOf(el.getAsString());
+                                        }
+                                    } catch (Exception ignoreEach) {
+                                    }
+                                }
+                            } else if (val.isJsonPrimitive()) {
+                                // Backward compatibility with old single value
+                                String relStr = val.getAsString();
+                                if (relStr != null && !relStr.isBlank()) {
+                                    relationship = Relationship.valueOf(relStr);
+                                }
+                            }
+                        }
+                        if (relationship != null) {
+                            links.put(key, relationship);
+                        }
+                    } catch (Exception ignore) {
+                        // skip malformed entries
+                    }
+                }
+            }
+
+            DebtItem.Builder builder = DebtItem.newBuilder()
                     .withFile(file)
                     .withLine(line)
                     .withTitle(title)
@@ -496,7 +538,11 @@ public final class DebtService {
                     .withTargetVersion(targetVersion)
                     .withComment(comment)
                     .withCurrentModule(currentModule)
-                    .build();
+                    .withLinks(links);
+            if (id != null && !id.isBlank()) {
+                builder.withId(id);
+            }
+            return builder.build();
         }
 
         private static String getAsString(JsonObject obj, String key, String def) {

@@ -11,14 +11,6 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class AddDebtAction extends AnAction {
     private static final Logger LOG = Logger.getInstance(AddDebtAction.class);
@@ -35,7 +27,7 @@ public class AddDebtAction extends AnAction {
         // Prefill dialog with current file and line
         String initialPath = file.getPath();
         int initialLine = editor.getCaretModel().getLogicalPosition().line + 1;
-        AddDebtDialog dialog = new AddDebtDialog(initialPath, initialLine);
+        AddDebtDialog dialog = new AddDebtDialog(project, initialPath, initialLine);
         if (dialog.showAndGet()) {
             DebtService debtService = project.getService(DebtService.class);
             DebtSettings settings = project.getService(DebtSettings.class);
@@ -49,6 +41,7 @@ public class AddDebtAction extends AnAction {
             String storedPath = repoRoot.isEmpty() ? absolute : ds.toRepoRelative(absolute, repoRoot);
 
             final DebtItem debtItem = DebtItem.newBuilder()
+                    .withId(dialog.getId())
                     .withFile(storedPath)
                     .withLine(Math.max(1, dialog.getLine()))
                     .withTitle(dialog.getTitleText())

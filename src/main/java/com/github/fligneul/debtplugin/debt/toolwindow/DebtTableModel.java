@@ -12,15 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DebtTableModel extends DefaultTableModel {
-    public final List<DebtItem> debtItems = new ArrayList<>();
+    private final List<DebtItem> debtItems = new ArrayList<>();
     private final DebtService debtService;
-    private final ColumnService columnService;
 
     public DebtTableModel(DebtService debtService, ColumnService columnService) {
         this.debtService = debtService;
-        this.columnService = columnService;
-        for (ColumnService.Column c : this.columnService.getColumns()) {
-            String header = ColumnService.ACTIONS_NAME.equals(c.getName()) ? "" : c.getName();
+        for (ColumnService.Column column : columnService.getColumns()) {
+            String header = ColumnService.ACTIONS_NAME.equals(column.getName()) ? "" : column.getName();
             addColumn(header);
         }
     }
@@ -123,6 +121,10 @@ public class DebtTableModel extends DefaultTableModel {
                 debtItem.getComment(),
                 null
         });
+    }
+
+    public List<DebtItem> getDebtItems() {
+        return debtItems;
     }
 
     public void clearAll() {

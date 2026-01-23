@@ -2,9 +2,13 @@ package com.github.fligneul.debtplugin.debt.model;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 public class DebtItem {
+    private final String id;
     private final String file;
     private final int line;
     private final String title;
@@ -19,9 +23,12 @@ public class DebtItem {
     private final String comment;
     // Maven current module identifier (groupId:artifactId). Empty when unknown.
     private final String currentModule;
+    // Links to other debts keyed by target debt id with a list of relationships
+    private final Map<String, Relationship> links;
 
     // No-args constructor for serializers (e.g., Gson)
     public DebtItem() {
+        this.id = UUID.randomUUID().toString();
         this.file = "";
         this.line = 0;
         this.title = "";
@@ -35,9 +42,11 @@ public class DebtItem {
         this.targetVersion = "";
         this.comment = "";
         this.currentModule = "";
+        this.links = new LinkedHashMap<>();
     }
 
     private DebtItem(final Builder builder) {
+        this.id = builder.id != null && !builder.id.isBlank() ? builder.id : UUID.randomUUID().toString();
         this.file = Objects.requireNonNull(builder.file, "file");
         this.line = builder.line;
         this.title = Objects.requireNonNull(builder.title, "title");
@@ -51,6 +60,7 @@ public class DebtItem {
         this.targetVersion = Objects.requireNonNull(builder.targetVersion, "targetVersion");
         this.comment = Objects.requireNonNull(builder.comment, "comment");
         this.currentModule = builder.currentModule;
+        this.links = builder.links != null ? new LinkedHashMap<>(builder.links) : new LinkedHashMap<>();
     }
 
     public static Builder newBuilder() {
@@ -59,6 +69,16 @@ public class DebtItem {
 
     public Builder toBuilder() {
         return new Builder(this);
+    }
+
+    @NotNull
+    public String getId() {
+        return id;
+    }
+
+    @NotNull
+    public Map<String, Relationship> getLinks() {
+        return new LinkedHashMap<>(links);
     }
 
     @NotNull
@@ -130,22 +150,25 @@ public class DebtItem {
         if (o == null || getClass() != o.getClass()) return false;
         DebtItem debtItem = (DebtItem) o;
         return line == debtItem.line && wantedLevel == debtItem.wantedLevel &&
+                Objects.equals(id, debtItem.id) &&
                 Objects.equals(file, debtItem.file) && Objects.equals(title, debtItem.title) &&
                 Objects.equals(description, debtItem.description) && Objects.equals(username, debtItem.username) &&
                 complexity == debtItem.complexity && status == debtItem.status && priority == debtItem.priority &&
                 risk == debtItem.risk && Objects.equals(targetVersion, debtItem.targetVersion) && Objects.equals(comment, debtItem.comment)
-                && Objects.equals(currentModule, debtItem.currentModule);
+                && Objects.equals(currentModule, debtItem.currentModule)
+                && Objects.equals(links, debtItem.links);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, currentModule);
+        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, currentModule, links);
     }
 
     @Override
     public String toString() {
         return "DebtItem{" +
-                "file='" + file + '\'' +
+                "id='" + id + '\'' +
+                ", file='" + file + '\'' +
                 ", line=" + line +
                 ", title='" + title + '\'' +
                 ", description='" + description + '\'' +
@@ -158,10 +181,12 @@ public class DebtItem {
                 ", targetVersion='" + targetVersion + '\'' +
                 ", comment='" + comment + '\'' +
                 ", currentModule='" + currentModule + '\'' +
+                ", links=" + links +
                 '}';
     }
 
     public static class Builder {
+        private String id;
         private String file;
         private int line;
         private String title;
@@ -175,11 +200,13 @@ public class DebtItem {
         private String targetVersion;
         private String comment;
         private String currentModule;
+        private Map<String, Relationship> links;
 
         public Builder() {
         }
 
         public Builder(DebtItem item) {
+            this.id = item.id;
             this.file = item.file;
             this.line = item.line;
             this.title = item.title;
@@ -193,6 +220,17 @@ public class DebtItem {
             this.targetVersion = item.targetVersion;
             this.comment = item.comment;
             this.currentModule = item.currentModule;
+            this.links = item.links;
+        }
+
+        public Builder withId(final String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder withLinks(final Map<String, Relationship> links) {
+            this.links = links;
+            return this;
         }
 
         public Builder withFile(final String file) {

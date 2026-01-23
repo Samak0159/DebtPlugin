@@ -1,6 +1,5 @@
 package com.github.fligneul.debtplugin.debt.toolwindow;
 
-import com.github.fligneul.debtplugin.debt.action.AddDebtAction;
 import com.github.fligneul.debtplugin.debt.action.AddDebtDialog;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
@@ -80,7 +79,7 @@ public class DebtToolWindow {
     private final TableRowSorter<DebtTableModel> sorter;
     private final ModulePieChartPanel pieChartPanel;
     // Base row height to use as minimum when auto-expanding rows
-    private int defaultRowHeight;
+    private final int defaultRowHeight;
 
     // Cached items for reuse (table and chart)
     private final List<DebtItem> allItems = new ArrayList<>();
@@ -208,10 +207,10 @@ public class DebtToolWindow {
         TableColumn actionCol = table.getColumnModel().getColumn(12);
         ActionButtonsCell actionButtons = new ActionButtonsCell(viewRow -> {
             int modelRow = table.convertRowIndexToModel(viewRow);
-            if (modelRow >= 0 && modelRow < tableModel.debtItems.size()) {
-                DebtItem oldItem = tableModel.debtItems.get(modelRow);
+            if (modelRow >= 0 && modelRow < tableModel.getDebtItems().size()) {
+                DebtItem oldItem = tableModel.getDebtItems().get(modelRow);
                 // Open dialog pre-filled with selected item
-                AddDebtDialog dialog = new AddDebtDialog(oldItem);
+                AddDebtDialog dialog = new AddDebtDialog(project, oldItem);
                 if (dialog.showAndGet()) {
                     DebtItem newItem = oldItem.toBuilder()
                             .withFile(dialog.getFilePath())
@@ -226,6 +225,7 @@ public class DebtToolWindow {
                             .withTargetVersion(dialog.getTargetVersion())
                             .withComment(dialog.getComment())
                             .withCurrentModule(DebtService.resolveCurrentModule(dialog.getFilePath(), project.getBasePath()))
+                            .withLinks(dialog.getLinks())
                             .build();
 
                     LOG.info("Edit confirmed: file=" + newItem.getFile() + ":" + newItem.getLine() +
@@ -244,8 +244,8 @@ public class DebtToolWindow {
             }
         }, viewRow -> {
             int modelRow = table.convertRowIndexToModel(viewRow);
-            if (modelRow >= 0 && modelRow < tableModel.debtItems.size()) {
-                DebtItem debtItem = tableModel.debtItems.get(modelRow);
+            if (modelRow >= 0 && modelRow < tableModel.getDebtItems().size()) {
+                DebtItem debtItem = tableModel.getDebtItems().get(modelRow);
                 LOG.info("Delete confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
                         " title=\"" + debtItem.getTitle() + "\" user=" + debtItem.getUsername());
                 debtService.remove(debtItem);
@@ -405,7 +405,7 @@ public class DebtToolWindow {
                     int viewRow = table.getSelectedRow();
                     if (viewRow >= 0) {
                         int modelRow = table.convertRowIndexToModel(viewRow);
-                        DebtItem debtItem = tableModel.debtItems.get(modelRow);
+                        DebtItem debtItem = tableModel.getDebtItems().get(modelRow);
                         String stored = debtItem.getFile();
                         int line = debtItem.getLine();
                         String absolutePath = stored;
