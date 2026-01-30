@@ -5,9 +5,11 @@ import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Relationship;
+import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
+import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
 import com.github.fligneul.debtplugin.debt.toolkit.SwingComponentHelper;
 import com.github.fligneul.debtplugin.debt.toolwindow.DebtProviderService;
 import com.intellij.openapi.project.Project;
@@ -23,6 +25,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
@@ -32,6 +35,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class AddDebtDialog extends DialogWrapper {
+    private final Project project;
     private final DebtProviderService debtProviderService;
     private final TextFieldWithBrowseButton fileField = new TextFieldWithBrowseButton();
     private final JSpinner lineSpinner = new JSpinner(new SpinnerNumberModel(1, 1, Integer.MAX_VALUE, 1));
@@ -45,6 +49,7 @@ public class AddDebtDialog extends DialogWrapper {
     private final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
     private final JBTextField targetVersionField = new JBTextField();
     private final JSpinner estimationSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
+    private final JComboBox<Repository> repositoryComboBox = new JComboBox<>();
     private final DebtService debtService;
 
     // Whether the dialog is used to edit an existing item (true) or add a new one (false)
@@ -64,11 +69,13 @@ public class AddDebtDialog extends DialogWrapper {
     private String targetVersion = "";
     private int estimation = 0;
     private Map<String, Relationship> links;
+    private Repository selectedRepository;
 
     private LinksComponent linksComponent;
 
     public AddDebtDialog(Project project, String initialFilePath, int initialLine) {
         super(project, true);
+        this.project = project;
         this.debtProviderService = project.getService(DebtProviderService.class);
         this.debtService = project.getService(DebtService.class);
         setTitle("Add New Debt");
@@ -92,6 +99,7 @@ public class AddDebtDialog extends DialogWrapper {
 
     public AddDebtDialog(Project project, DebtItem item) {
         super(project, true);
+        this.project = project;
         this.debtProviderService = project.getService(DebtProviderService.class);
         this.debtService = project.getService(DebtService.class);
         setTitle("Edit Debt");
@@ -133,6 +141,31 @@ public class AddDebtDialog extends DialogWrapper {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
+        // Populate repository combobox with repositories from RepositoriesService
+        RepositoriesService repositoriesService = project.getService(RepositoriesService.class);
+        repositoryComboBox.removeAllItems();
+        for (Repository repo : repositoriesService.getRepositories()) {
+            repositoryComboBox.addItem(repo);
+        }
+        // Set custom renderer to display repository name
+        repositoryComboBox.setRenderer((list, value, index, isSelected, cellHasFocus) -> {
+            JLabel label = new JLabel();
+            if (value != null) {
+                label.setText(value.getRepositoryName());
+            }
+            if (isSelected) {
+                label.setBackground(list.getSelectionBackground());
+                label.setForeground(list.getSelectionForeground());
+                label.setOpaque(true);
+            }
+            return label;
+        });
+
+        // Repository combobox row - visible only when file is null or blank
+        final JPanel repositoryRow = SwingComponentHelper.labeled("Repository:", repositoryComboBox);
+        repositoryRow.setVisible(filePath == null || filePath.isBlank());
+        panel.add(repositoryRow);
+
         // File picker using Swing's JFileChooser to open the OS file dialog
         fileField.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
@@ -144,8 +177,39 @@ public class AddDebtDialog extends DialogWrapper {
             if (result == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
                 String chosenPath = chooser.getSelectedFile().getAbsolutePath();
                 fileField.setText(chosenPath);
+                // Update repository combobox visibility when file changes
+                String currentFile = fileField.getText();
+                repositoryRow.setVisible(currentFile == null || currentFile.isBlank());
+                panel.revalidate();
+                panel.repaint();
             }
         });
+        
+        // Add document listener to file field to update repository combobox visibility
+        fileField.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateRepositoryVisibility();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateRepositoryVisibility();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateRepositoryVisibility();
+            }
+
+            private void updateRepositoryVisibility() {
+                String currentFile = fileField.getText();
+                repositoryRow.setVisible(currentFile == null || currentFile.isBlank());
+                panel.revalidate();
+                panel.repaint();
+            }
+        });
+
         final JPanel fileRow = SwingComponentHelper.labeled("File:", fileField);
         fileRow.setVisible(isEdit);
         panel.add(fileRow);
@@ -223,6 +287,7 @@ public class AddDebtDialog extends DialogWrapper {
         this.links = linksComponent == null
                 ? Map.of()
                 : linksComponent.getLinks();
+        this.selectedRepository = (Repository) repositoryComboBox.getSelectedItem();
 
         super.doOKAction();
     }
@@ -281,5 +346,9 @@ public class AddDebtDialog extends DialogWrapper {
 
     public Map<String, Relationship> getLinks() {
         return this.links;
+    }
+
+    public Repository getSelectedRepository() {
+        return selectedRepository;
     }
 }

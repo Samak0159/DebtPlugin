@@ -60,6 +60,7 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
         List<DebtItem> debtsOnLine = new ArrayList<>();
         for (DebtItem debtItem : debtsForRepository.getValue()) {
             String stored = debtItem.getFile();
+            if (stored.isBlank()) continue;
             String storedRel = toProjectRelative(stored, basePath);
             if (storedRel.equalsIgnoreCase(currentRel) && debtItem.getLine() == lineInFile) {
                 debtsOnLine.add(debtItem);
