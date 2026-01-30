@@ -482,6 +482,7 @@ public final class DebtService {
 
             String targetVersion = getAsString(obj, "targetVersion", "");
             String comment = getAsString(obj, "comment", "");
+            int estimation = getAsInt(obj, "estimation", 0);
 
             // Optional, backward-compatible: prefer currentModule, fallback to legacy moduleParent
             String currentModule = getAsString(obj, "currentModule", null);
@@ -538,6 +539,7 @@ public final class DebtService {
                     .withRisk(risk)
                     .withTargetVersion(targetVersion)
                     .withComment(comment)
+                    .withEstimation(estimation)
                     .withCurrentModule(currentModule)
                     .withLinks(links);
             if (id != null && !id.isBlank()) {

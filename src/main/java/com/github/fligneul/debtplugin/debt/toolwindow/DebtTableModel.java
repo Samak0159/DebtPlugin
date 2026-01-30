@@ -26,7 +26,7 @@ public class DebtTableModel extends DefaultTableModel {
     @Override
     public boolean isCellEditable(int row, int column) {
         // Make the first two columns (File and Line) non-editable
-        // Keep the User column (4) non-editable; Delete button column (12) must be editable for the button
+        // Keep the User column (4) non-editable; Delete button column (13) must be editable for the button
         return (column >= 2) && (column != 4);
     }
 
@@ -38,7 +38,8 @@ public class DebtTableModel extends DefaultTableModel {
             case 7 -> Status.class; // Status column
             case 8 -> Priority.class; // Priority column
             case 9 -> Risk.class; // Risk column
-            case 12 -> Object.class; // Action column (for button)
+            case 12 -> Integer.class; // Estimation column
+            case 13 -> Object.class; // Action column (for button)
             default -> super.getColumnClass(columnIndex);
         };
     }
@@ -91,6 +92,32 @@ public class DebtTableModel extends DefaultTableModel {
             case 11 -> updatedDebtItem = oldDebtItem.toBuilder()
                     .withComment((String) aValue)
                     .build();
+            case 12 -> {
+                int estimation;
+                if (aValue instanceof Number n) {
+                    estimation = n.intValue();
+                } else if (aValue instanceof String s) {
+                    String trimmed = s.trim();
+                    if (trimmed.isEmpty()) {
+                        estimation = 0;
+                    } else {
+                        try {
+                            estimation = Integer.parseInt(trimmed);
+                        } catch (NumberFormatException ex) {
+                            estimation = oldDebtItem.getEstimation();
+                        }
+                    }
+                } else {
+                    estimation = oldDebtItem.getEstimation();
+                }
+                // Clamp to non-negative
+                int clamped = Math.max(0, estimation);
+                updatedDebtItem = oldDebtItem.toBuilder()
+                        .withEstimation(clamped)
+                        .build();
+                // Also reflect the clamped value in the table model
+                aValue = clamped;
+            }
             default -> updatedDebtItem = oldDebtItem;
         }
 
@@ -119,6 +146,7 @@ public class DebtTableModel extends DefaultTableModel {
                 debtItem.getRisk(),
                 debtItem.getTargetVersion(),
                 debtItem.getComment(),
+                debtItem.getEstimation(),
                 null
         });
     }

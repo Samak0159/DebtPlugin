@@ -101,6 +101,7 @@ public class DebtToolWindow {
     private final MultiSelectFilter<Risk> riskFilter = new MultiSelectFilter<>("Risk");
     private final JTextField targetVersionFilter = new JTextField(6);
     private final JTextField commentFilter = new JTextField(8);
+    private final MultiSelectFilter<Integer> estimationFilter = new MultiSelectFilter<>("Estimation");
 
     // Filter inputs (chart tab)
     private final JTextField fileFilterChart = new JTextField(8);
@@ -114,6 +115,7 @@ public class DebtToolWindow {
     private final MultiSelectFilter<Risk> riskFilterChart = new MultiSelectFilter<>("Risk");
     private final JTextField targetVersionFilterChart = new JTextField(6);
     private final JTextField commentFilterChart = new JTextField(8);
+    private final MultiSelectFilter<Integer> estimationFilterChart = new MultiSelectFilter<>("Estimation");
 
     // UI elements for filters layout
     private JPanel row2Panel;
@@ -205,8 +207,8 @@ public class DebtToolWindow {
         table.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(riskComboBox));
 
 
-        // Action buttons (Edit + Delete) column is at index 12
-        TableColumn actionCol = table.getColumnModel().getColumn(12);
+        // Action buttons (Edit + Delete) column is at index 13
+        TableColumn actionCol = table.getColumnModel().getColumn(13);
         ActionButtonsCell actionButtons = new ActionButtonsCell(viewRow -> {
             int modelRow = table.convertRowIndexToModel(viewRow);
             if (modelRow >= 0 && modelRow < tableModel.getDebtItems().size()) {
@@ -226,6 +228,7 @@ public class DebtToolWindow {
                             .withRisk(dialog.getRisk())
                             .withTargetVersion(dialog.getTargetVersion())
                             .withComment(dialog.getComment())
+                            .withEstimation(dialog.getEstimation())
                             .withCurrentModule(DebtService.resolveCurrentModule(dialog.getFilePath(), project.getBasePath()))
                             .withLinks(dialog.getLinks())
                             .build();
@@ -358,6 +361,8 @@ public class DebtToolWindow {
         row3Panel.add(priorityFilter);
         row3Panel.add(new JLabel("Risk:"));
         row3Panel.add(riskFilter);
+        row3Panel.add(new JLabel("Estimation:"));
+        row3Panel.add(estimationFilter);
 
         // Initial visibility based on collapsed state
         row2Panel.setVisible(!filtersCollapsed);
@@ -399,6 +404,7 @@ public class DebtToolWindow {
         statusFilter.addSelectionListener(this::applyFilters);
         priorityFilter.addSelectionListener(this::applyFilters);
         riskFilter.addSelectionListener(this::applyFilters);
+        estimationFilter.addSelectionListener(this::applyFilters);
 
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -497,6 +503,8 @@ public class DebtToolWindow {
         row3PanelChart.add(priorityFilterChart);
         row3PanelChart.add(new JLabel("Risk:"));
         row3PanelChart.add(riskFilterChart);
+        row3PanelChart.add(new JLabel("Estimation:"));
+        row3PanelChart.add(estimationFilterChart);
 
         // Initial visibility
         row2PanelChart.setVisible(!filtersCollapsedChart);
@@ -537,6 +545,7 @@ public class DebtToolWindow {
         statusFilterChart.addSelectionListener(this::updateChart);
         priorityFilterChart.addSelectionListener(this::updateChart);
         riskFilterChart.addSelectionListener(this::updateChart);
+        estimationFilterChart.addSelectionListener(this::updateChart);
 
         chartPanel.add(new JBScrollPane(pieChartPanel), BorderLayout.CENTER);
 
@@ -569,6 +578,7 @@ public class DebtToolWindow {
 
         addTextFilter(filters, targetVersionFilter.getText(), 10);
         addTextFilter(filters, commentFilter.getText(), 11);
+        addMultiSelectExact(filters, estimationFilter.getSelected(), 12);
 
         if (filters.isEmpty()) {
             sorter.setRowFilter(null);
@@ -588,6 +598,7 @@ public class DebtToolWindow {
             if (!riskFilter.getSelected().isEmpty()) actives.add("risk");
             if (!targetVersionFilter.getText().isBlank()) actives.add("targetVersion");
             if (!commentFilter.getText().isBlank()) actives.add("comment");
+            if (!estimationFilter.getSelected().isEmpty()) actives.add("estimation");
             LOG.debug("Filters applied. active=" + actives + " visibleRows=" + table.getRowCount());
         }
     }
@@ -629,16 +640,22 @@ public class DebtToolWindow {
         allItems.clear();
 
         final TreeSet<Integer> wantedLevels = new TreeSet<>(Comparator.naturalOrder());
+        final TreeSet<Integer> estimations = new TreeSet<>(Comparator.naturalOrder());
 
         for (DebtItem item : debtProviderService.currentItems()) {
             tableModel.addDebtItem(item);
             allItems.add(item);
             wantedLevels.add(item.getWantedLevel());
+            estimations.add(item.getEstimation());
         }
 
         // Populate wanted level options for both tabs
         wantedLevelFilter.setOptions(wantedLevels);
         wantedLevelFilterChart.setOptions(wantedLevels);
+        
+        // Populate estimation options for both tabs
+        estimationFilter.setOptions(estimations);
+        estimationFilterChart.setOptions(estimations);
 
         // Apply filters to table and update chart aggregation
         applyFilters();
@@ -704,6 +721,8 @@ public class DebtToolWindow {
         if (!priorityFilterChart.getSelected().isEmpty() && !priorityFilterChart.getSelected().contains(it.getPriority()))
             return false;
         if (!riskFilterChart.getSelected().isEmpty() && !riskFilterChart.getSelected().contains(it.getRisk()))
+            return false;
+        if (!estimationFilterChart.getSelected().isEmpty() && !estimationFilterChart.getSelected().contains(it.getEstimation()))
             return false;
 
         return true;
@@ -823,7 +842,7 @@ public class DebtToolWindow {
             // Header row
             String[] headers = new String[]{
                     "File", "Line", "Title", "Description", "User", "WantedLevel",
-                    "Complexity", "Status", "Priority", "Risk", "TargetVersion", "Comment", "CurrentModule"
+                    "Complexity", "Status", "Priority", "Risk", "TargetVersion", "Comment", "Estimation", "CurrentModule"
             };
             Row header = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
@@ -848,6 +867,7 @@ public class DebtToolWindow {
                 row.createCell(c++).setCellValue(String.valueOf(it.getRisk()));
                 row.createCell(c++).setCellValue(it.getTargetVersion());
                 row.createCell(c++).setCellValue(it.getComment());
+                row.createCell(c++).setCellValue(it.getEstimation());
                 row.createCell(c).setCellValue(it.getCurrentModule());
             }
 

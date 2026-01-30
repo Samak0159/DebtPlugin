@@ -44,6 +44,7 @@ public class AddDebtDialog extends DialogWrapper {
     private final JComboBox<Priority> priorityComboBox = new JComboBox<>(Priority.values());
     private final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
     private final JBTextField targetVersionField = new JBTextField();
+    private final JSpinner estimationSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
     private final DebtService debtService;
 
     // Whether the dialog is used to edit an existing item (true) or add a new one (false)
@@ -61,6 +62,7 @@ public class AddDebtDialog extends DialogWrapper {
     private Priority priority = Priority.Medium;
     private Risk risk = Risk.Medium;
     private String targetVersion = "";
+    private int estimation = 0;
     private Map<String, Relationship> links;
 
     private LinksComponent linksComponent;
@@ -85,6 +87,7 @@ public class AddDebtDialog extends DialogWrapper {
         riskComboBox.setSelectedItem(this.risk);
         targetVersionField.setText(this.targetVersion);
         commentArea.setText(this.comment);
+        estimationSpinner.setValue(0);
     }
 
     public AddDebtDialog(Project project, DebtItem item) {
@@ -107,6 +110,7 @@ public class AddDebtDialog extends DialogWrapper {
         this.priority = item.getPriority();
         this.risk = item.getRisk();
         this.targetVersion = item.getTargetVersion();
+        this.estimation = item.getEstimation();
         this.links = item.getLinks();
         init();
         // After components are created in init(), push values into UI controls
@@ -121,6 +125,7 @@ public class AddDebtDialog extends DialogWrapper {
         priorityComboBox.setSelectedItem(item.getPriority());
         riskComboBox.setSelectedItem(item.getRisk());
         targetVersionField.setText(item.getTargetVersion());
+        estimationSpinner.setValue(item.getEstimation());
     }
 
     @Override
@@ -186,6 +191,10 @@ public class AddDebtDialog extends DialogWrapper {
         panel.add(commentRow);
         panel.add(Box.createVerticalStrut(4));
 
+        // Estimation
+        panel.add(SwingComponentHelper.labeled("Estimation:", estimationSpinner));
+        panel.add(Box.createVerticalStrut(4));
+
         linksComponent = new LinksComponent(debtService, debtProviderService, links, id);
         JPanel linksPanel = linksComponent.getPane();
         linksPanel.setVisible(isEdit);
@@ -199,6 +208,8 @@ public class AddDebtDialog extends DialogWrapper {
         this.filePath = fileField.getText() != null ? fileField.getText().trim() : "";
         Object ln = lineSpinner.getValue();
         this.line = (ln instanceof Number) ? Math.max(1, ((Number) ln).intValue()) : 1;
+        Object estimation = estimationSpinner.getValue();
+        this.estimation = (estimation instanceof Number) ? Math.max(0, ((Number) estimation).intValue()) : 0;
         this.titleText = titleField.getText();
         this.description = descriptionArea.getText();
         this.comment = commentArea.getText();
@@ -262,6 +273,10 @@ public class AddDebtDialog extends DialogWrapper {
 
     public String getTargetVersion() {
         return targetVersion;
+    }
+
+    public int getEstimation() {
+        return estimation;
     }
 
     public Map<String, Relationship> getLinks() {

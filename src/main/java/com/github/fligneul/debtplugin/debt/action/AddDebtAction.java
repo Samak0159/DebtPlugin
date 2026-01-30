@@ -54,6 +54,7 @@ public class AddDebtAction extends AnAction {
                     .withRisk(dialog.getRisk())
                     .withTargetVersion(dialog.getTargetVersion())
                     .withComment(dialog.getComment())
+                    .withEstimation(dialog.getEstimation())
                     .withCurrentModule(DebtService.resolveCurrentModule(absolute, project.getBasePath()))
                     .build();
 

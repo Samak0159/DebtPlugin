@@ -21,6 +21,7 @@ public class DebtItem {
     private final Risk risk;
     private final String targetVersion;
     private final String comment;
+    private final int estimation;
     // Maven current module identifier (groupId:artifactId). Empty when unknown.
     private final String currentModule;
     // Links to other debts keyed by target debt id with a list of relationships
@@ -41,6 +42,7 @@ public class DebtItem {
         this.risk = Risk.Medium;
         this.targetVersion = "";
         this.comment = "";
+        this.estimation = 0;
         this.currentModule = "";
         this.links = new LinkedHashMap<>();
     }
@@ -59,6 +61,7 @@ public class DebtItem {
         this.risk = Objects.requireNonNull(builder.risk, "risk");
         this.targetVersion = Objects.requireNonNull(builder.targetVersion, "targetVersion");
         this.comment = Objects.requireNonNull(builder.comment, "comment");
+        this.estimation = builder.estimation;
         this.currentModule = builder.currentModule;
         this.links = builder.links != null ? new LinkedHashMap<>(builder.links) : new LinkedHashMap<>();
     }
@@ -139,6 +142,10 @@ public class DebtItem {
         return comment;
     }
 
+    public int getEstimation() {
+        return estimation;
+    }
+
     @NotNull
     public String getCurrentModule() {
         return currentModule;
@@ -149,19 +156,27 @@ public class DebtItem {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DebtItem debtItem = (DebtItem) o;
-        return line == debtItem.line && wantedLevel == debtItem.wantedLevel &&
-                Objects.equals(id, debtItem.id) &&
-                Objects.equals(file, debtItem.file) && Objects.equals(title, debtItem.title) &&
-                Objects.equals(description, debtItem.description) && Objects.equals(username, debtItem.username) &&
-                complexity == debtItem.complexity && status == debtItem.status && priority == debtItem.priority &&
-                risk == debtItem.risk && Objects.equals(targetVersion, debtItem.targetVersion) && Objects.equals(comment, debtItem.comment)
+        return line == debtItem.line
+                && wantedLevel == debtItem.wantedLevel
+                && estimation == debtItem.estimation
+                && Objects.equals(id, debtItem.id)
+                && Objects.equals(file, debtItem.file)
+                && Objects.equals(title, debtItem.title)
+                && Objects.equals(description, debtItem.description)
+                && Objects.equals(username, debtItem.username)
+                && complexity == debtItem.complexity
+                && status == debtItem.status
+                && priority == debtItem.priority
+                && risk == debtItem.risk
+                && Objects.equals(targetVersion, debtItem.targetVersion)
+                && Objects.equals(comment, debtItem.comment)
                 && Objects.equals(currentModule, debtItem.currentModule)
                 && Objects.equals(links, debtItem.links);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, currentModule, links);
+        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links);
     }
 
     @Override
@@ -180,6 +195,7 @@ public class DebtItem {
                 ", risk=" + risk +
                 ", targetVersion='" + targetVersion + '\'' +
                 ", comment='" + comment + '\'' +
+                ", estimation=" + estimation +
                 ", currentModule='" + currentModule + '\'' +
                 ", links=" + links +
                 '}';
@@ -199,6 +215,7 @@ public class DebtItem {
         private Risk risk;
         private String targetVersion;
         private String comment;
+        private int estimation;
         private String currentModule;
         private Map<String, Relationship> links;
 
@@ -219,6 +236,7 @@ public class DebtItem {
             this.risk = item.risk;
             this.targetVersion = item.targetVersion;
             this.comment = item.comment;
+            this.estimation = item.estimation;
             this.currentModule = item.currentModule;
             this.links = item.links;
         }
@@ -290,6 +308,11 @@ public class DebtItem {
 
         public Builder withComment(final String comment) {
             this.comment = comment;
+            return this;
+        }
+
+        public Builder withEstimation(final int estimation) {
+            this.estimation = estimation;
             return this;
         }
 
