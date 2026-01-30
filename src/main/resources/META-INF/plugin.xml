@@ -2,7 +2,7 @@
 <idea-plugin>
     <id>com.github.fligneul.debtplugin</id>
     <name>DebtPlugin</name>
-    <vendor>fligneul</vendor>
+    <vendor>Samak</vendor>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
