@@ -78,6 +78,7 @@ public class DebtToolWindow {
     private final JBTable table;
     private final TableRowSorter<DebtTableModel> sorter;
     private final ModulePieChartPanel pieChartPanel;
+    private final RelationshipGraphPanel relationshipGraphPanel;
     // Base row height to use as minimum when auto-expanding rows
     private final int defaultRowHeight;
 
@@ -143,6 +144,7 @@ public class DebtToolWindow {
         this.sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
         this.pieChartPanel = new ModulePieChartPanel();
+        this.relationshipGraphPanel = new RelationshipGraphPanel();
 
         // Apply wrapping renderers for text columns
         applyWrappingRenderers();
@@ -542,6 +544,7 @@ public class DebtToolWindow {
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("debts", listPanel);
         tabs.addTab("modules", chartPanel);
+        tabs.addTab("RelationShip", new JBScrollPane(relationshipGraphPanel));
 
         JPanel root = new JPanel(new BorderLayout());
         root.add(tabs, BorderLayout.CENTER);
@@ -677,6 +680,7 @@ public class DebtToolWindow {
             byModule.put(module, byModule.getOrDefault(module, 0) + 1);
         }
         pieChartPanel.setData(byModule);
+        relationshipGraphPanel.setData(allItems);
     }
 
     private boolean matchesChart(DebtItem it) {
