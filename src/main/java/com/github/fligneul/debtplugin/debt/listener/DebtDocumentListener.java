@@ -39,7 +39,9 @@ public final class DebtDocumentListener implements DocumentListener {
             VirtualFile vf = FileDocumentManager.getInstance().getFile(doc);
             if (vf == null) return;
 
-            String filePath = toProjectRelativeSafe(vf.getPath(), project.getBasePath());
+            DebtService debtService = project.getService(DebtService.class);
+            String repoRoot = debtService.findRepoRootForAbsolutePath(vf.getPath());
+            String filePath = toProjectRelativeSafe(vf.getPath(), repoRoot);
 
             // Compute line delta
             int startOffset = event.getOffset();
@@ -60,20 +62,19 @@ public final class DebtDocumentListener implements DocumentListener {
 
             int affectedLastLine = startLine + Math.max(oldLines, 0); // inclusive region end (pre-change)
 
-            DebtService debtService = project.getService(DebtService.class);
-            List<DebtItem> all = debtService.all();
-            List<Runnable> updates = new ArrayList<>();
+            final List<Runnable> updates = new ArrayList<>();
 
-            for (DebtItem d : all) {
-                String debtPath = toProjectRelativeSafe(d.getFile(), project.getBasePath());
+            for (DebtItem debtItem : debtService.all()) {
+                String repoForDebtFile = debtService.findRepoRootForAbsolutePath(debtItem.getFile());
+                String debtPath = toProjectRelativeSafe(debtItem.getFile(), repoForDebtFile);
                 if (!equalsPathIgnoreCase(debtPath, filePath)) continue;
 
-                int line = d.getLine();
+                int line = debtItem.getLine();
                 if (line > affectedLastLine) {
                     int newLine = line + delta;
                     if (newLine < 1) newLine = 1;
                     if (newLine != line) {
-                        final DebtItem od = d;
+                        final DebtItem od = debtItem;
                         final int nl = newLine;
                         updates.add(() -> applyLineUpdate(debtService, od, nl));
                     }
@@ -82,7 +83,7 @@ public final class DebtDocumentListener implements DocumentListener {
                     int newLine = startLine;
                     if (newLine < 1) newLine = 1;
                     if (newLine != line) {
-                        final DebtItem od2 = d;
+                        final DebtItem od2 = debtItem;
                         final int nl2 = newLine;
                         updates.add(() -> applyLineUpdate(debtService, od2, nl2));
                     }
