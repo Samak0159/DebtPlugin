@@ -64,6 +64,7 @@ public final class DebtService {
         this.settings = project.getService(DebtSettings.class);
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(DebtItem.class, new DebtItemDeserializer())
+                .setPrettyPrinting()
                 .create();
 
         loadDebts();
