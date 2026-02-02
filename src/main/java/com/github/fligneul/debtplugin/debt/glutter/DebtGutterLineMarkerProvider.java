@@ -53,7 +53,17 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
         if (file.getVirtualFile() == null) return null;
         String osPath = file.getVirtualFile().getPath();
         String basePath = debtService.findRepoRootForAbsolutePath(osPath);
-        final Map.Entry<Repository, List<DebtItem>> debtsForRepository = debtService.getDebtForRepositoryAbsolutePath(basePath).orElseThrow();
+        Optional<Map.Entry<Repository, List<DebtItem>>> debtsForRepositoryOpt = debtService.getDebtForRepositoryAbsolutePath(basePath);
+
+        if (debtsForRepositoryOpt.isEmpty()) {
+            debtService.loadDebts();
+            debtsForRepositoryOpt = debtService.getDebtForRepositoryAbsolutePath(basePath);
+            if (debtsForRepositoryOpt.isEmpty()) {
+                return null;
+            }
+        }
+
+        var debtsForRepository = debtsForRepositoryOpt.get();
 
         String currentRel = toProjectRelative(osPath, basePath);
         int lineInFile = lineNumber + 1;

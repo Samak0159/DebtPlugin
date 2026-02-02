@@ -7,9 +7,10 @@ public final class Repository {
     private final String repositoryName;
     private String jsonPath;
 
-    public Repository(String repositoryAbsolutePath, String repositoryName) {
+    public Repository(String repositoryAbsolutePath, String repositoryName, String jsonPath) {
         this.repositoryAbsolutePath = repositoryAbsolutePath;
         this.repositoryName = repositoryName;
+        this.jsonPath = jsonPath;
     }
 
     public String getRepositoryAbsolutePath() {

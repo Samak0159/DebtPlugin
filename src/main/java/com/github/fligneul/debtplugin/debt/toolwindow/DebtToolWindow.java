@@ -690,9 +690,9 @@ public class DebtToolWindow {
     private void updateChart() {
         // Aggregate modules from items that match the chart-specific filters
         final LinkedHashMap<String, Integer> byModule = new LinkedHashMap<>();
-        for (DebtItem it : allItems) {
-            if (!matchesChart(it)) continue;
-            String module = it.getCurrentModule();
+        for (DebtItem debtItem : allItems) {
+            if (!matchesChart(debtItem)) continue;
+            String module = debtItem.getCurrentModule();
             if (module == null || module.isBlank()) module = "Unknown";
             byModule.put(module, byModule.getOrDefault(module, 0) + 1);
         }

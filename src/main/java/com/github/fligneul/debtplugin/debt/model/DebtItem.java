@@ -146,7 +146,6 @@ public class DebtItem {
         return estimation;
     }
 
-    @NotNull
     public String getCurrentModule() {
         return currentModule;
     }

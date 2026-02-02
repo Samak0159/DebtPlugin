@@ -1,6 +1,7 @@
 package com.github.fligneul.debtplugin.debt.service;
 
 import com.github.fligneul.debtplugin.debt.model.Repository;
+import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -45,7 +46,7 @@ public final class RepositoriesService {
         return roots.stream()
                 .map(root -> {
                     final String repositoryName = getRepositoryName(root);
-                    return new Repository(root, repositoryName);
+                    return new Repository(root, repositoryName, DebtSettings.DEFAULT_DEBT_FILE_PATH);
                 })
                 .toList();
     }
@@ -66,7 +67,10 @@ public final class RepositoriesService {
             String basePath = project.getBasePath();
             if (basePath == null || basePath.isBlank()) return Collections.emptyList();
             File misc = new File(basePath, ".idea/misc.xml");
-            if (!misc.exists()) return Collections.emptyList();
+            if (!misc.exists()) {
+                LOG.error("file misc do not exist ? path :" + misc.getAbsolutePath());
+                return Collections.emptyList();
+            }
 
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             try {
@@ -98,19 +102,16 @@ public final class RepositoriesService {
                             String raw = fopt.getAttribute("value");
                             if (raw == null || raw.isBlank()) continue;
                             String resolved = resolveIdeaPathVariable(raw, basePath);
-                            try {
-                                Path p = Paths.get(resolved).toAbsolutePath().normalize();
-                                Path dir = p.getParent();
-                                if (dir != null) roots.add(dir.toString());
-                            } catch (Exception ignored) {
-                            }
+                            Path p = Paths.get(resolved).toAbsolutePath().normalize();
+                            Path dir = p.getParent();
+                            if (dir != null) roots.add(dir.toString());
                         }
                     }
                 }
             }
             return new ArrayList<>(roots);
         } catch (Exception e) {
-            LOG.warn("RepositoriesService: failed to parse .idea/misc.xml: " + e.getMessage(), e);
+            LOG.error("RepositoriesService: failed to parse .idea/misc.xml: " + e.getMessage(), e);
             return Collections.emptyList();
         }
     }
@@ -120,7 +121,7 @@ public final class RepositoriesService {
      */
     public List<Repository> getRepositories() {
         synchronized (repositories) {
-            if(repositories.isEmpty()) {
+            if (repositories.isEmpty()) {
                 refreshFromMisc();
             }
             return Collections.unmodifiableList(repositories);
@@ -144,14 +145,16 @@ public final class RepositoriesService {
      *
      * @return
      */
-    public List<Repository> refreshFromMisc() {
+    public void refreshFromMisc() {
         List<String> roots = getMavenOriginalRootFoldersFromIdeaMisc();
         setRepositories(convertRootPathsToRepositories(roots));
+    }
+
+    public void refreshAndLoadDebts() {
+        refreshFromMisc();
 
         final DebtService debtService = project.getService(DebtService.class);
         debtService.loadDebts();
-
-        return this.repositories;
     }
 
     private static String resolveIdeaPathVariable(String value, String basePath) {

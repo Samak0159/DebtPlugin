@@ -5,11 +5,11 @@ import com.github.fligneul.debtplugin.debt.listener.DebtVfsListener;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Priority;
+import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
-import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializationContext;
@@ -254,7 +254,10 @@ public final class DebtService {
         for (Repository repository : repositories) {
             try {
                 File jsonFile = resolveRepoDebtFile(repository.getRepositoryAbsolutePath(), relPath);
-                if (!jsonFile.exists()) continue;
+                if (!jsonFile.exists()) {
+                    debtsByRepository.put(repository, new ArrayList<>());
+                    continue;
+                }
                 LOG.info("Loading debts from repo file: " + jsonFile.getAbsolutePath());
                 String content = Files.readString(jsonFile.toPath(), StandardCharsets.UTF_8);
                 Type type = new TypeToken<List<DebtItem>>() {
@@ -574,6 +577,10 @@ public final class DebtService {
     }
 
     public static String resolveCurrentModule(String filePath, String projectBasePath) {
+        if (filePath == null) {
+            return null;
+        }
+
         try {
             Path start = Paths.get(filePath).toAbsolutePath();
             Path root = projectBasePath != null ? Paths.get(projectBasePath).toAbsolutePath() : start.getRoot();

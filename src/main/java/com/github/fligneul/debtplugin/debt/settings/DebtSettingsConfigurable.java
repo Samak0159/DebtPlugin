@@ -193,7 +193,7 @@ public class DebtSettingsConfigurable implements Configurable {
     @Override
     public void reset() {
         var reposService = project.getService(RepositoriesService.class);
-        reposService.refreshFromMisc();
+        reposService.refreshAndLoadDebts();
 
         usernameField.setText(settings.getOrInitUsername());
         rebuildRepoTable();

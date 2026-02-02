@@ -54,7 +54,8 @@ public final class DebtVfsListener implements BulkFileListener {
                         oldPathAbs = buildPath(parent, Objects.toString(prop.getOldValue(), file.getName()));
                         newPathAbs = buildPath(parent, Objects.toString(prop.getNewValue(), file.getName()));
                     } else {
-                        throw new RuntimeException("Event not handle");
+                        LOG.warn("Event " + event.getClass() + " not handle");
+                        continue;
                     }
 
                     String oldRepoRoot = debtService.findRepoRootForAbsolutePath(oldPathAbs);

@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -62,10 +63,16 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
             final String basePath = project.getBasePath();
 
             return Optional.ofNullable(getRepoDebtPaths().get(basePath))
+                    .or(() -> Optional.ofNullable(basePath)
+                            .map(base -> base.replace("/", "\\"))
+                            .map(windowsBasePath -> getRepoDebtPaths().get(windowsBasePath)))
                     .orElseGet(() -> {
-                        final String windowsBasePath = basePath.replace("/", "\\");
-
-                        return getRepoDebtPaths().get(windowsBasePath);
+                        final String path = Optional.ofNullable(basePath)
+                                .orElse("");
+                        return Paths.get(path)
+                                .resolve(DEFAULT_DEBT_FILE_PATH)
+                                .normalize()
+                                .toString();
                     });
         }
     }
