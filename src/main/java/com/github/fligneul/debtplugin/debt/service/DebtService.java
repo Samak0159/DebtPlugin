@@ -26,6 +26,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.VisibleForTesting;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -462,7 +463,9 @@ public final class DebtService {
         project.getMessageBus().syncPublisher(TOPIC).refresh();
     }
 
-    private static final class DebtItemDeserializer implements JsonDeserializer<DebtItem> {
+    //TODO Should be private. split this sevice with WriterService
+    @VisibleForTesting
+    public static final class DebtItemDeserializer implements JsonDeserializer<DebtItem> {
         @Override
         public DebtItem deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject obj = json.getAsJsonObject();

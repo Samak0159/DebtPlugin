@@ -96,10 +96,12 @@ public class LinksComponent {
 
             @Override
             public void focusLost(final FocusEvent e) {
-                String text = debtFilterTextField.getText().trim().toLowerCase();
-                debtComboModel.filter(text);
-                linksDebtCombo.revalidate();
-                linksDebtCombo.repaint();
+                synchronized (LinksComponent.class) {
+                    String text = debtFilterTextField.getText().trim().toLowerCase();
+                    debtComboModel.filter(text);
+                    linksDebtCombo.revalidate();
+                    linksDebtCombo.repaint();
+                }
             }
         });
 
@@ -122,7 +124,15 @@ public class LinksComponent {
             if (linkDebtItem == null || relationship == null) return;
             linksTableModel.add(new LinkTitleRelation(linkDebtItem.id(), linkDebtItem.debtName(), relationship));
 
-            debtComboModel.removeElement(linkDebtItem);
+            synchronized (LinksComponent.class) {
+                final int newIndex = linksDebtCombo.getSelectedIndex() == 1
+                        ? 0
+                        : 1;
+                linksDebtCombo.setSelectedIndex(newIndex);
+                debtComboModel.removeElement(linkDebtItem);
+                linksDebtCombo.revalidate();
+                linksDebtCombo.repaint();
+            }
         });
         debtComboModel.canAddListener(addLink::setEnabled);
 

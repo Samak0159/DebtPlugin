@@ -1,17 +1,17 @@
 package com.github.fligneul.debtplugin.debt.action.links;
 
 import com.github.fligneul.debtplugin.debt.toolwindow.DebtProviderService;
+import com.intellij.ui.MutableCollectionComboBoxModel;
+import org.jetbrains.annotations.NotNull;
 
-import javax.swing.DefaultComboBoxModel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class LinkComboModel extends DefaultComboBoxModel<LinkDebtItem> {
+public class LinkComboModel extends MutableCollectionComboBoxModel<LinkDebtItem> {
     private static final LinkDebtItem DEFAULT_IF_EMPTY = new LinkDebtItem("", "");
 
-    private final List<LinkDebtItem> items;
     private final LinkTableModel linksTableModel;
 
     private Consumer<Boolean> update;
@@ -19,7 +19,6 @@ public class LinkComboModel extends DefaultComboBoxModel<LinkDebtItem> {
 
     public LinkComboModel(DebtProviderService debtProviderService, final LinkTableModel linksTableModel, final String idCurrentEditingDebt) {
         this.linksTableModel = linksTableModel;
-        this.items = new ArrayList<>();
 
         this.originalDebt = debtProviderService.currentItems()
                 .stream()
@@ -34,35 +33,37 @@ public class LinkComboModel extends DefaultComboBoxModel<LinkDebtItem> {
     }
 
     @Override
+    public void update(@NotNull final List<? extends LinkDebtItem> items) {
+        if (items.isEmpty()) {
+            super.update(List.of(DEFAULT_IF_EMPTY));
+            update.accept(false);
+        } else {
+            super.update(items);
+            update.accept(true);
+        }
+    }
+
     public void addAll(Collection<? extends LinkDebtItem> collection) {
         collection.forEach(this::addElement);
     }
 
     public void addElement(final LinkDebtItem debtItem) {
-        final boolean isEmpty = items.size() == 1 && DEFAULT_IF_EMPTY.equals(items.get(0));
+        final boolean isEmpty = this.getInternalList().size() == 1 && DEFAULT_IF_EMPTY.equals(this.getInternalList().get(0));
 
         if (isEmpty) {
-            super.removeElement(DEFAULT_IF_EMPTY);
-            items.remove(DEFAULT_IF_EMPTY);
-            update.accept(true);
+            this.getInternalList().remove(DEFAULT_IF_EMPTY);
+            if (update != null) update.accept(true);
         }
 
         super.addElement(debtItem);
-        items.add(debtItem);
-    }
-
-    public void removeAllElements() {
-        new ArrayList<>(items).forEach(this::removeElement);
     }
 
     public void removeElement(final LinkDebtItem debtItem) {
-        super.removeElement(debtItem);
-        items.remove(debtItem);
+        this.getInternalList().remove(debtItem);
 
-        if (items.isEmpty()) {
-            items.add(DEFAULT_IF_EMPTY);
-            addElement(DEFAULT_IF_EMPTY);
-            update.accept(false);
+        if (this.getInternalList().isEmpty()) {
+            this.getInternalList().add(DEFAULT_IF_EMPTY);
+            if (update != null) update.accept(false);
         }
     }
 
@@ -71,15 +72,16 @@ public class LinkComboModel extends DefaultComboBoxModel<LinkDebtItem> {
     }
 
     public void filter(final String text) {
-        removeAllElements();
+        final List<LinkDebtItem> newList = new ArrayList<>();
         for (LinkDebtItem debtItem : originalDebt) {
             if (!linksTableModel.getLinks().containsKey(debtItem.id())
-                    && !items.contains(debtItem)
                     && (text.isEmpty()
-                    || debtItem.debtName().toLowerCase().contains(text))
+                    || debtItem.debtName().toLowerCase().contains(text.toLowerCase()))
             ) {
-                addElement(debtItem);
+                newList.add(debtItem);
             }
         }
+
+        update(newList);
     }
 }
