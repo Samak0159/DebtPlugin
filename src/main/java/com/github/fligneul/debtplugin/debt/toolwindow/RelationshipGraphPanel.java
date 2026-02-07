@@ -3,11 +3,9 @@ package com.github.fligneul.debtplugin.debt.toolwindow;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.intellij.ui.JBColor;
-import com.intellij.util.ui.JBUI;
 
 import javax.swing.JPanel;
 import java.awt.BasicStroke;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -32,9 +30,20 @@ public class RelationshipGraphPanel extends JPanel {
 
     public void setData(List<DebtItem> newItems) {
         // Only keep items that have at least one link
-        this.items = newItems.stream()
-                .filter(it -> !it.getLinks().isEmpty())
+        final List<DebtItem> debtsWithLinks = newItems.stream()
+                .filter(debtItem -> !debtItem.getLinks().isEmpty())
                 .toList();
+
+        final List<DebtItem> linked = newItems.stream()
+                .filter(debtItem -> debtsWithLinks.stream()
+                        .map(DebtItem::getLinks)
+                        .anyMatch(links -> links.containsKey(debtItem.getId())))
+                .toList();
+
+        this.items = new ArrayList<>();
+        items.addAll(debtsWithLinks);
+        items.addAll(linked);
+
         calculateLayout();
         repaint();
     }
@@ -57,7 +66,7 @@ public class RelationshipGraphPanel extends JPanel {
             int y = (int) (centerY + radius * Math.sin(angle)) - NODE_HEIGHT / 2;
             nodePositions.put(items.get(i).getId(), new Point(x, y));
         }
-        
+
         // Adjust preferred size based on layout
         int maxX = 0, maxY = 0;
         for (Point p : nodePositions.values()) {
@@ -164,7 +173,7 @@ public class RelationshipGraphPanel extends JPanel {
         java.awt.geom.QuadCurve2D q = new java.awt.geom.QuadCurve2D.Float();
         q.setCurve(x1, y1, ctrlX, ctrlY, x2, y2);
         g2.draw(q);
-        
+
         // Draw arrow head at the end
         drawArrowHead(g2, ctrlX, ctrlY, x2, y2);
     }
@@ -179,7 +188,7 @@ public class RelationshipGraphPanel extends JPanel {
         g2.drawLine(x2, y2, dx1, dy1);
         g2.drawLine(x2, y2, dx2, dy2);
     }
-    
+
     @Override
     public void doLayout() {
         super.doLayout();
