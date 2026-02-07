@@ -39,7 +39,7 @@ public class DebtTableModel extends DefaultTableModel {
             case 8 -> Priority.class; // Priority column
             case 9 -> Risk.class; // Risk column
             case 12 -> Integer.class; // Estimation column
-            case 13 -> Object.class; // Action column (for button)
+            case 14 -> Object.class; // Action column (for button)
             default -> super.getColumnClass(columnIndex);
         };
     }
@@ -147,6 +147,7 @@ public class DebtTableModel extends DefaultTableModel {
                 debtItem.getTargetVersion(),
                 debtItem.getComment(),
                 debtItem.getEstimation(),
+                debtItem.getCurrentModule(),
                 null
         });
     }

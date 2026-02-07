@@ -67,7 +67,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class DebtToolWindow {
     private static final Logger LOG = Logger.getInstance(DebtToolWindow.class);
@@ -102,6 +104,7 @@ public class DebtToolWindow {
     private final JTextField targetVersionFilter = new JTextField(6);
     private final JTextField commentFilter = new JTextField(8);
     private final MultiSelectFilter<Integer> estimationFilter = new MultiSelectFilter<>("Estimation");
+    private final MultiSelectFilter<String> moduleFilter = new MultiSelectFilter<>("Module");
 
     // Filter inputs (chart tab)
     private final JTextField fileFilterChart = new JTextField(8);
@@ -116,6 +119,7 @@ public class DebtToolWindow {
     private final JTextField targetVersionFilterChart = new JTextField(6);
     private final JTextField commentFilterChart = new JTextField(8);
     private final MultiSelectFilter<Integer> estimationFilterChart = new MultiSelectFilter<>("Estimation");
+    private final MultiSelectFilter<String> moduleFilterChart = new MultiSelectFilter<>("Module");
 
     // UI elements for filters layout
     private JPanel row2Panel;
@@ -127,6 +131,7 @@ public class DebtToolWindow {
     private JPanel row3PanelChart;
     private JButton toggleFiltersButtonChart;
     private boolean filtersCollapsedChart = false;
+    private LinkedHashMap<String, Integer> modules;
 
     public DebtToolWindow(Project project) {
         this.project = project;
@@ -208,7 +213,7 @@ public class DebtToolWindow {
 
 
         // Action buttons (Edit + Delete) column is at index 13
-        TableColumn actionCol = table.getColumnModel().getColumn(13);
+        TableColumn actionCol = table.getColumnModel().getColumn(14);
         ActionButtonsCell actionButtons = new ActionButtonsCell(viewRow -> {
             int modelRow = table.convertRowIndexToModel(viewRow);
             if (modelRow >= 0 && modelRow < tableModel.getDebtItems().size()) {
@@ -363,6 +368,8 @@ public class DebtToolWindow {
         row3Panel.add(riskFilter);
         row3Panel.add(new JLabel("Estimation:"));
         row3Panel.add(estimationFilter);
+        row3Panel.add(new JLabel("Module:"));
+        row3Panel.add(moduleFilter);
 
         // Initial visibility based on collapsed state
         row2Panel.setVisible(!filtersCollapsed);
@@ -372,7 +379,7 @@ public class DebtToolWindow {
         filters.add(row1);
         filters.add(row2Panel);
         filters.add(row3Panel);
-        listPanel.add(filters, BorderLayout.NORTH);
+        listPanel.add(new JBScrollPane(filters), BorderLayout.NORTH);
 
         // Wire filter listeners
         DocumentListener docListener = new DocumentListener() {
@@ -405,6 +412,7 @@ public class DebtToolWindow {
         priorityFilter.addSelectionListener(this::applyFilters);
         riskFilter.addSelectionListener(this::applyFilters);
         estimationFilter.addSelectionListener(this::applyFilters);
+        moduleFilter.addSelectionListener(this::applyFilters);
 
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -505,6 +513,8 @@ public class DebtToolWindow {
         row3PanelChart.add(riskFilterChart);
         row3PanelChart.add(new JLabel("Estimation:"));
         row3PanelChart.add(estimationFilterChart);
+        row3PanelChart.add(new JLabel("Module:"));
+        row3PanelChart.add(moduleFilterChart);
 
         // Initial visibility
         row2PanelChart.setVisible(!filtersCollapsedChart);
@@ -514,7 +524,7 @@ public class DebtToolWindow {
         chartFilters.add(row1Chart);
         chartFilters.add(row2PanelChart);
         chartFilters.add(row3PanelChart);
-        chartPanel.add(chartFilters, BorderLayout.NORTH);
+        chartPanel.add(new JBScrollPane(chartFilters), BorderLayout.NORTH);
 
         // Wire chart filter listeners
         DocumentListener docListenerChart = new DocumentListener() {
@@ -546,6 +556,7 @@ public class DebtToolWindow {
         priorityFilterChart.addSelectionListener(this::updateChart);
         riskFilterChart.addSelectionListener(this::updateChart);
         estimationFilterChart.addSelectionListener(this::updateChart);
+        moduleFilterChart.addSelectionListener(this::updateChart);
 
         chartPanel.add(new JBScrollPane(pieChartPanel), BorderLayout.CENTER);
 
@@ -576,6 +587,14 @@ public class DebtToolWindow {
         addMultiSelectExact(filters, priorityFilter.getSelected(), 8);
         addMultiSelectExact(filters, riskFilter.getSelected(), 9);
 
+        final Set<String> modulesSelected = moduleFilter.getSelected()
+                .stream()
+                .map(value -> "Unknown".equals(value)
+                        ? ""
+                        : value)
+                .collect(Collectors.toSet());
+        addMultiSelectExact(filters, modulesSelected, 13);
+
         addTextFilter(filters, targetVersionFilter.getText(), 10);
         addTextFilter(filters, commentFilter.getText(), 11);
         addMultiSelectExact(filters, estimationFilter.getSelected(), 12);
@@ -599,6 +618,7 @@ public class DebtToolWindow {
             if (!targetVersionFilter.getText().isBlank()) actives.add("targetVersion");
             if (!commentFilter.getText().isBlank()) actives.add("comment");
             if (!estimationFilter.getSelected().isEmpty()) actives.add("estimation");
+            if (!moduleFilter.getSelected().isEmpty()) actives.add("module");
             LOG.debug("Filters applied. active=" + actives + " visibleRows=" + table.getRowCount());
         }
     }
@@ -649,10 +669,15 @@ public class DebtToolWindow {
             estimations.add(item.getEstimation());
         }
 
+        modules = new LinkedHashMap<>();
+        modules.putAll(extractModules(allItems));
+
+        moduleFilter.setOptions(modules.keySet());
+        moduleFilterChart.setOptions(modules.keySet());
         // Populate wanted level options for both tabs
         wantedLevelFilter.setOptions(wantedLevels);
         wantedLevelFilterChart.setOptions(wantedLevels);
-        
+
         // Populate estimation options for both tabs
         estimationFilter.setOptions(estimations);
         estimationFilterChart.setOptions(estimations);
@@ -666,6 +691,19 @@ public class DebtToolWindow {
         if (LOG.isDebugEnabled()) {
             LOG.debug("updateTable completed in " + (System.currentTimeMillis() - start) + " ms. total=" + allItems.size() + " visible=" + visible);
         }
+    }
+
+    private LinkedHashMap<String, Integer> extractModules(final List<DebtItem> allItems) {
+        final LinkedHashMap<String, Integer> modules = new LinkedHashMap<>();
+
+        for (DebtItem debtItem : allItems) {
+            if (!matchesChart(debtItem)) continue;
+            String module = debtItem.getCurrentModule();
+            if (module == null || module.isBlank()) module = "Unknown";
+            modules.put(module, modules.getOrDefault(module, 0) + 1);
+        }
+
+        return modules;
     }
 
     private void applyColumnVisibilityFromSettings() {
@@ -689,15 +727,44 @@ public class DebtToolWindow {
 
     private void updateChart() {
         // Aggregate modules from items that match the chart-specific filters
-        final LinkedHashMap<String, Integer> byModule = new LinkedHashMap<>();
-        for (DebtItem debtItem : allItems) {
-            if (!matchesChart(debtItem)) continue;
-            String module = debtItem.getCurrentModule();
-            if (module == null || module.isBlank()) module = "Unknown";
-            byModule.put(module, byModule.getOrDefault(module, 0) + 1);
-        }
-        pieChartPanel.setData(byModule);
+
+        final List<DebtItem> items = allItems.stream()
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getFile, fileFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getTitle, titleFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getDescription, descFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getUsername, userFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getWantedLevel, wantedLevelFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getComplexity, complexityFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getStatus, statusFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getPriority, priorityFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getRisk, riskFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getTargetVersion, targetVersionFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getComment, commentFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getEstimation, estimationFilterChart))
+                .filter(debtItem -> {
+                    return chartFilterContaining(debtItem, currentItem -> {
+                        return "".equals(currentItem.getCurrentModule())
+                                ? "Unknown"
+                                : currentItem.getCurrentModule();
+                    }, moduleFilterChart);
+                })
+                .toList();
+
+        final LinkedHashMap<String, Integer> modules = extractModules(items);
+        pieChartPanel.setData(modules);
         relationshipGraphPanel.setData(allItems);
+    }
+
+    private <T> boolean chartFilterContaining(final DebtItem debtItem, final Function<DebtItem, T> getterFct, final MultiSelectFilter<T> filter) {
+        return filter.getSelected().isEmpty()
+                ? true
+                : filter.getSelected()
+                .stream()
+                .anyMatch(selected -> getterFct.apply(debtItem).equals(selected));
+    }
+
+    private boolean chartFilterContaining(final DebtItem debtItem, final Function<DebtItem, String> getterFct, final JTextField filter) {
+        return getterFct.apply(debtItem).contains(filter.getText());
     }
 
     private boolean matchesChart(DebtItem it) {
