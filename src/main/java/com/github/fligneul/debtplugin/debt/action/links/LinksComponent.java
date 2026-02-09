@@ -83,7 +83,13 @@ public class LinksComponent {
         linksDebtCombo = new JComboBox<>(debtComboModel);
         linksDebtCombo.setEditable(false);
         // Simple renderer: show title (and id)
-        linksDebtCombo.setRenderer((list, value, index, isSelected, cellHasFocus) -> new JLabel(value.debtName()));
+        linksDebtCombo.setRenderer((list, value, index, isSelected, cellHasFocus) -> {
+            if(value == null) {
+                return new JLabel("");
+            } else {
+                return new JLabel(value.debtName());
+            }
+        });
 
         // Basic filter behavior: when user types in editor, filter items by title
         var debtFilterTextField = new JTextField(12);
