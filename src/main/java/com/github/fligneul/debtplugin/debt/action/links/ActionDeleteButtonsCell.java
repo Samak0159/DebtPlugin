@@ -29,7 +29,7 @@ public class ActionDeleteButtonsCell extends AbstractCellEditor implements Table
         panel.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 2));
         panel.setOpaque(true);
 
-        final JButton deleteButton = new JButton(AllIcons.General.Delete);
+        final JButton deleteButton = new JButton(AllIcons.Actions.DeleteTag);
         deleteButton.setOpaque(true);
         deleteButton.setBorder(BorderFactory.createEmptyBorder());
         deleteButton.setMargin(new Insets(0, 0, 0, 0));

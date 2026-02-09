@@ -10,7 +10,7 @@ import java.util.function.IntConsumer;
 
 public class DeleteButtonCell extends AbstractCellEditor implements TableCellRenderer, TableCellEditor {
     private final IntConsumer onClick;
-    private final JButton button = new JButton(AllIcons.General.Delete);
+    private final JButton button = new JButton(AllIcons.Actions.DeleteTag);
     private int row = 0;
 
     public DeleteButtonCell(IntConsumer onClick) {

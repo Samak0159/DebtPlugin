@@ -42,7 +42,7 @@ public class ActionButtonsCell extends AbstractCellEditor implements TableCellRe
             if (onEdit != null && row >= 0) onEdit.accept(row);
         });
 
-        deleteButton = new JButton(AllIcons.General.Delete);
+        deleteButton = new JButton(AllIcons.Actions.DeleteTag);
         deleteButton.setOpaque(true);
         deleteButton.setBorder(BorderFactory.createEmptyBorder());
         deleteButton.setMargin(new Insets(0, 0, 0, 0));
