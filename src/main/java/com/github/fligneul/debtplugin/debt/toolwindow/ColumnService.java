@@ -116,12 +116,6 @@ public final class ColumnService {
         }
     }
 
-    public synchronized Map<String, Boolean> getVisibilityByName() {
-        Map<String, Boolean> out = new LinkedHashMap<>();
-        for (Column c : columnsByIndex.values()) out.put(c.getName(), c.isVisible());
-        return out;
-    }
-
     public synchronized List<Integer> getVisibleModelIndices() {
         List<Integer> out = new ArrayList<>();
         for (Column c : columnsByIndex.values()) if (c.isVisible()) out.add(c.getIndex());

@@ -93,6 +93,7 @@ public class DebtToolWindow {
 
     // Filter inputs (table tab)
     private final JTextField fileFilter = new JTextField(8);
+    private final JTextField lineFilter = new JTextField(5);
     private final JTextField titleFilter = new JTextField(8);
     private final JTextField descFilter = new JTextField(8);
     private final JTextField userFilter = new JTextField(6);
@@ -295,6 +296,16 @@ public class DebtToolWindow {
                 if (LOG.isDebugEnabled()) LOG.debug("Refresh requested from toolwindow");
                 updateTable();
             }
+
+            @Override
+            public void selectFile(String file) {
+                fileFilter.setText(tableModel.displayedFile(file));
+            }
+
+            @Override
+            public void selectLine(final int line) {
+                lineFilter.setText(String.valueOf(line));
+            }
         });
     }
 
@@ -344,6 +355,8 @@ public class DebtToolWindow {
         row2Panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         row2Panel.add(new JLabel("File:"));
         row2Panel.add(fileFilter);
+        row2Panel.add(new JLabel("Line:"));
+        row2Panel.add(lineFilter);
         row2Panel.add(new JLabel("Title:"));
         row2Panel.add(titleFilter);
         row2Panel.add(new JLabel("Description:"));
@@ -399,6 +412,7 @@ public class DebtToolWindow {
             }
         };
         fileFilter.getDocument().addDocumentListener(docListener);
+        lineFilter.getDocument().addDocumentListener(docListener);
         titleFilter.getDocument().addDocumentListener(docListener);
         descFilter.getDocument().addDocumentListener(docListener);
         userFilter.getDocument().addDocumentListener(docListener);
@@ -577,6 +591,7 @@ public class DebtToolWindow {
         List<RowFilter<DebtTableModel, Object>> filters = new ArrayList<>();
 
         addTextFilter(filters, fileFilter.getText(), 0);
+        addTextExactFilter(filters, lineFilter.getText(), 1);
         addTextFilter(filters, titleFilter.getText(), 2);
         addTextFilter(filters, descFilter.getText(), 3);
         addTextFilter(filters, userFilter.getText(), 4);
@@ -638,6 +653,12 @@ public class DebtToolWindow {
         if (text != null && !text.isBlank()) {
             String expr = "(?i)" + Pattern.quote(text.trim());
             filters.add(RowFilter.regexFilter(expr, column));
+        }
+    }
+
+    private void addTextExactFilter(final List<RowFilter<DebtTableModel, Object>> filters, final String text, final int column) {
+        if (text != null && !text.isBlank()) {
+            filters.add(RowFilter.numberFilter(RowFilter.ComparisonType.EQUAL, Integer.valueOf(text.trim()), column));
         }
     }
 

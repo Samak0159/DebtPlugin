@@ -6,6 +6,7 @@ import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
 import com.intellij.codeInsight.daemon.LineMarkerProvider;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.markup.GutterIconRenderer;
 import com.intellij.openapi.project.DumbAware;
@@ -29,6 +30,8 @@ import java.util.Map;
 import java.util.Optional;
 
 public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAware {
+    private static final Logger LOG = Logger.getInstance(DebtGutterLineMarkerProvider.class);
+
     @Override
     public @Nullable LineMarkerInfo<?> getLineMarkerInfo(PsiElement element) {
         PsiFile file = element.getContainingFile();
@@ -106,6 +109,15 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
                 icon,
                 tooltipProvider,
                 (evt, el) -> {
+                    if (!debtsOnLine.isEmpty()) {
+                        final String currentFile = debtsOnLine.get(0).getFile();
+                        final int currentLine = debtsOnLine.get(0).getLine();
+
+                        LOG.debug("Selection of the file %s : line %s".formatted(currentFile, currentLine));
+
+                        project.getMessageBus().syncPublisher(DebtService.TOPIC).selectFile(currentFile);
+                        project.getMessageBus().syncPublisher(DebtService.TOPIC).selectLine(currentLine);
+                    }
                 },
                 GutterIconRenderer.Alignment.LEFT,
                 () -> "Debt"

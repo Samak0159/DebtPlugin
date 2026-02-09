@@ -130,11 +130,8 @@ public class DebtTableModel extends DefaultTableModel {
 
     public void addDebtItem(DebtItem debtItem) {
         debtItems.add(debtItem);
-        String displayedFile = debtItem.getFile().replace('\\', '/');
-        int lastSlash = displayedFile.lastIndexOf('/');
-        if (lastSlash >= 0) displayedFile = displayedFile.substring(lastSlash + 1);
         addRow(new Object[]{
-                displayedFile,
+                displayedFile(debtItem.getFile()),
                 debtItem.getLine(),
                 debtItem.getTitle(),
                 debtItem.getDescription(),
@@ -150,6 +147,13 @@ public class DebtTableModel extends DefaultTableModel {
                 debtItem.getCurrentModule(),
                 null
         });
+    }
+
+    public String displayedFile(final String file) {
+        String displayedFile = file.replace('\\', '/');
+        int lastSlash = displayedFile.lastIndexOf('/');
+        if (lastSlash >= 0) displayedFile = displayedFile.substring(lastSlash + 1);
+        return displayedFile;
     }
 
     public List<DebtItem> getDebtItems() {
