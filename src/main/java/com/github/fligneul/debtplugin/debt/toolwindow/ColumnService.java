@@ -75,8 +75,9 @@ public final class ColumnService {
                 "TargetVersion",// 10
                 "Comment",      // 11
                 "Estimation",   // 12
-                "Module",       // 13
-                ""              // 14 actions (empty header)
+                "Jira",         // 13
+                "Module",       // 14
+                ""              // 15 actions (empty header)
         };
 
         for (int i = 0; i < names.length; i++) {

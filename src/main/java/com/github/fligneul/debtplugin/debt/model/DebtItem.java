@@ -22,6 +22,7 @@ public class DebtItem {
     private final String targetVersion;
     private final String comment;
     private final int estimation;
+    private final String jira;
     // Maven current module identifier (groupId:artifactId). Empty when unknown.
     private final String currentModule;
     // Links to other debts keyed by target debt id with a list of relationships
@@ -45,6 +46,7 @@ public class DebtItem {
         this.estimation = 0;
         this.currentModule = "";
         this.links = new LinkedHashMap<>();
+        this.jira = "";
     }
 
     private DebtItem(final Builder builder) {
@@ -64,6 +66,7 @@ public class DebtItem {
         this.estimation = builder.estimation;
         this.currentModule = builder.currentModule;
         this.links = builder.links != null ? new LinkedHashMap<>(builder.links) : new LinkedHashMap<>();
+        this.jira = builder.jira == null || builder.jira.isBlank() ? "": builder.jira;
     }
 
     public static Builder newBuilder() {
@@ -150,6 +153,10 @@ public class DebtItem {
         return currentModule;
     }
 
+    public String getJira() {
+        return jira;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -170,12 +177,13 @@ public class DebtItem {
                 && Objects.equals(targetVersion, debtItem.targetVersion)
                 && Objects.equals(comment, debtItem.comment)
                 && Objects.equals(currentModule, debtItem.currentModule)
-                && Objects.equals(links, debtItem.links);
+                && Objects.equals(links, debtItem.links)
+                && Objects.equals(jira, debtItem.jira);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links);
+        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links, jira);
     }
 
     @Override
@@ -197,6 +205,7 @@ public class DebtItem {
                 ", estimation=" + estimation +
                 ", currentModule='" + currentModule + '\'' +
                 ", links=" + links +
+                ", jira=" + jira +
                 '}';
     }
 
@@ -217,6 +226,7 @@ public class DebtItem {
         private int estimation;
         private String currentModule;
         private Map<String, Relationship> links;
+        private String jira;
 
         public Builder() {
         }
@@ -238,6 +248,7 @@ public class DebtItem {
             this.estimation = item.estimation;
             this.currentModule = item.currentModule;
             this.links = item.links;
+            this.jira = item.jira;
         }
 
         public Builder withId(final String id) {
@@ -317,6 +328,11 @@ public class DebtItem {
 
         public Builder withCurrentModule(final String currentModule) {
             this.currentModule = currentModule;
+            return this;
+        }
+
+        public Builder withJira(final String jira) {
+            this.jira = jira;
             return this;
         }
 

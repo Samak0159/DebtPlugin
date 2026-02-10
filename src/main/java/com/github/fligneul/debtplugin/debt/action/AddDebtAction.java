@@ -56,6 +56,7 @@ public class AddDebtAction extends AnAction {
                     .withComment(dialog.getComment())
                     .withEstimation(dialog.getEstimation())
                     .withCurrentModule(DebtService.resolveCurrentModule(absolute, project.getBasePath()))
+                    .withJira(dialog.getJira())
                     .build();
 
             LOG.info("Add debt confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +

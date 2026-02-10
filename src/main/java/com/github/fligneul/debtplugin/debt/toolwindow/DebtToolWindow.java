@@ -106,6 +106,7 @@ public class DebtToolWindow {
     private final JTextField commentFilter = new JTextField(8);
     private final MultiSelectFilter<Integer> estimationFilter = new MultiSelectFilter<>("Estimation");
     private final MultiSelectFilter<String> moduleFilter = new MultiSelectFilter<>("Module");
+    private final JTextField jiraFilter = new JTextField(8);
 
     // Filter inputs (chart tab)
     private final JTextField fileFilterChart = new JTextField(8);
@@ -121,6 +122,7 @@ public class DebtToolWindow {
     private final JTextField commentFilterChart = new JTextField(8);
     private final MultiSelectFilter<Integer> estimationFilterChart = new MultiSelectFilter<>("Estimation");
     private final MultiSelectFilter<String> moduleFilterChart = new MultiSelectFilter<>("Module");
+    private final JTextField jiraFilterChart = new JTextField(8);
 
     // UI elements for filters layout
     private JPanel row2Panel;
@@ -213,8 +215,8 @@ public class DebtToolWindow {
         table.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(riskComboBox));
 
 
-        // Action buttons (Edit + Delete) column is at index 13
-        TableColumn actionCol = table.getColumnModel().getColumn(14);
+        // Action buttons (Edit + Delete) column is at index 15
+        TableColumn actionCol = table.getColumnModel().getColumn(15);
         ActionButtonsCell actionButtons = new ActionButtonsCell(viewRow -> {
             int modelRow = table.convertRowIndexToModel(viewRow);
             if (modelRow >= 0 && modelRow < tableModel.getDebtItems().size()) {
@@ -237,6 +239,7 @@ public class DebtToolWindow {
                             .withEstimation(dialog.getEstimation())
                             .withCurrentModule(DebtService.resolveCurrentModule(dialog.getFilePath(), project.getBasePath()))
                             .withLinks(dialog.getLinks())
+                            .withJira(dialog.getJira())
                             .build();
 
                     LOG.info("Edit confirmed: file=" + newItem.getFile() + ":" + newItem.getLine() +
@@ -367,6 +370,8 @@ public class DebtToolWindow {
         row2Panel.add(targetVersionFilter);
         row2Panel.add(new JLabel("Comment:"));
         row2Panel.add(commentFilter);
+        row2Panel.add(new JLabel("Jira:"));
+        row2Panel.add(jiraFilter);
 
         row3Panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         row3Panel.add(new JLabel("WantedLevel:"));
@@ -418,6 +423,7 @@ public class DebtToolWindow {
         userFilter.getDocument().addDocumentListener(docListener);
         targetVersionFilter.getDocument().addDocumentListener(docListener);
         commentFilter.getDocument().addDocumentListener(docListener);
+        jiraFilter.getDocument().addDocumentListener(docListener);
 
         // Multi-select filters notify via selection listeners
         wantedLevelFilter.addSelectionListener(this::applyFilters);
@@ -513,6 +519,8 @@ public class DebtToolWindow {
         row2PanelChart.add(targetVersionFilterChart);
         row2PanelChart.add(new JLabel("Comment:"));
         row2PanelChart.add(commentFilterChart);
+        row2PanelChart.add(new JLabel("Jira:"));
+        row2PanelChart.add(jiraFilterChart);
 
         row3PanelChart = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         row3PanelChart.add(new JLabel("WantedLevel:"));
@@ -563,6 +571,7 @@ public class DebtToolWindow {
         userFilterChart.getDocument().addDocumentListener(docListenerChart);
         targetVersionFilterChart.getDocument().addDocumentListener(docListenerChart);
         commentFilterChart.getDocument().addDocumentListener(docListenerChart);
+        jiraFilterChart.getDocument().addDocumentListener(docListenerChart);
 
         wantedLevelFilterChart.addSelectionListener(this::updateChart);
         complexityFilterChart.addSelectionListener(this::updateChart);
@@ -602,17 +611,18 @@ public class DebtToolWindow {
         addMultiSelectExact(filters, priorityFilter.getSelected(), 8);
         addMultiSelectExact(filters, riskFilter.getSelected(), 9);
 
+        addTextFilter(filters, targetVersionFilter.getText(), 10);
+        addTextFilter(filters, commentFilter.getText(), 11);
+        addMultiSelectExact(filters, estimationFilter.getSelected(), 12);
+        addTextFilter(filters, jiraFilter.getText(), 13);
+
         final Set<String> modulesSelected = moduleFilter.getSelected()
                 .stream()
                 .map(value -> "Unknown".equals(value)
                         ? ""
                         : value)
                 .collect(Collectors.toSet());
-        addMultiSelectExact(filters, modulesSelected, 13);
-
-        addTextFilter(filters, targetVersionFilter.getText(), 10);
-        addTextFilter(filters, commentFilter.getText(), 11);
-        addMultiSelectExact(filters, estimationFilter.getSelected(), 12);
+        addMultiSelectExact(filters, modulesSelected, 14);
 
         if (filters.isEmpty()) {
             sorter.setRowFilter(null);
@@ -634,6 +644,7 @@ public class DebtToolWindow {
             if (!commentFilter.getText().isBlank()) actives.add("comment");
             if (!estimationFilter.getSelected().isEmpty()) actives.add("estimation");
             if (!moduleFilter.getSelected().isEmpty()) actives.add("module");
+            if (!jiraFilter.getText().isBlank()) actives.add("Jira");
             LOG.debug("Filters applied. active=" + actives + " visibleRows=" + table.getRowCount());
         }
     }
@@ -769,6 +780,7 @@ public class DebtToolWindow {
                                 : currentItem.getCurrentModule();
                     }, moduleFilterChart);
                 })
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getJira, jiraFilterChart))
                 .toList();
 
         final LinkedHashMap<String, Integer> modules = extractModules(items);
@@ -798,6 +810,7 @@ public class DebtToolWindow {
         if (!containsIgnoreCase(it.getUsername(), userFilterChart.getText())) return false;
         if (!containsIgnoreCase(it.getTargetVersion(), targetVersionFilterChart.getText())) return false;
         if (!containsIgnoreCase(it.getComment(), commentFilterChart.getText())) return false;
+        if (!containsIgnoreCase(it.getJira(), jiraFilterChart.getText())) return false;
 
         // Multi-select exact matches when any selected
         if (!wantedLevelFilterChart.getSelected().isEmpty() && !wantedLevelFilterChart.getSelected().contains(it.getWantedLevel()))

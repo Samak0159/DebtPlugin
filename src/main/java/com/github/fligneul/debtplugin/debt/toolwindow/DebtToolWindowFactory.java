@@ -69,6 +69,7 @@ public class DebtToolWindowFactory implements ToolWindowFactory {
                             .withEstimation(dialog.getEstimation())
                             .withCurrentModule(DebtService.resolveCurrentModule(absolute, project.getBasePath()))
                             .withLinks(dialog.getLinks())
+                            .withJira(dialog.getJira())
                             .build();
 
                     LOG.info("Add debt confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +

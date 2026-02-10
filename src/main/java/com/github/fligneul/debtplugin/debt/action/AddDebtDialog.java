@@ -50,6 +50,7 @@ public class AddDebtDialog extends DialogWrapper {
     private final JBTextField targetVersionField = new JBTextField();
     private final JSpinner estimationSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
     private final JComboBox<Repository> repositoryComboBox = new JComboBox<>();
+    private final JBTextField jiraField = new JBTextField();
     private final DebtService debtService;
 
     // Whether the dialog is used to edit an existing item (true) or add a new one (false)
@@ -69,6 +70,7 @@ public class AddDebtDialog extends DialogWrapper {
     private String targetVersion = "";
     private int estimation = 0;
     private Map<String, Relationship> links;
+    private String jira = "";
     private Repository selectedRepository;
 
     private LinksComponent linksComponent;
@@ -120,6 +122,7 @@ public class AddDebtDialog extends DialogWrapper {
         this.targetVersion = item.getTargetVersion();
         this.estimation = item.getEstimation();
         this.links = item.getLinks();
+        this.jira = item.getJira();
         init();
         // After components are created in init(), push values into UI controls
         fileField.setText(item.getFile());
@@ -134,6 +137,7 @@ public class AddDebtDialog extends DialogWrapper {
         riskComboBox.setSelectedItem(item.getRisk());
         targetVersionField.setText(item.getTargetVersion());
         estimationSpinner.setValue(item.getEstimation());
+        jiraField.setText(item.getJira());
     }
 
     @Override
@@ -259,6 +263,10 @@ public class AddDebtDialog extends DialogWrapper {
         panel.add(SwingComponentHelper.labeled("Estimation:", estimationSpinner));
         panel.add(Box.createVerticalStrut(4));
 
+        final JPanel jiraPanel = SwingComponentHelper.labeled("Jira:", jiraField);
+        jiraPanel.setVisible(isEdit);
+        panel.add(jiraPanel);
+
         linksComponent = new LinksComponent(debtService, debtProviderService, links, id);
         JPanel linksPanel = linksComponent.getPane();
         linksPanel.setVisible(isEdit);
@@ -288,6 +296,7 @@ public class AddDebtDialog extends DialogWrapper {
                 ? Map.of()
                 : linksComponent.getLinks();
         this.selectedRepository = (Repository) repositoryComboBox.getSelectedItem();
+        this.jira = jiraField.getText();
 
         super.doOKAction();
     }
@@ -350,5 +359,8 @@ public class AddDebtDialog extends DialogWrapper {
 
     public Repository getSelectedRepository() {
         return selectedRepository;
+    }
+    public String getJira() {
+        return jira;
     }
 }

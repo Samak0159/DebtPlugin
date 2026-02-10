@@ -39,7 +39,7 @@ public class DebtTableModel extends DefaultTableModel {
             case 8 -> Priority.class; // Priority column
             case 9 -> Risk.class; // Risk column
             case 12 -> Integer.class; // Estimation column
-            case 14 -> Object.class; // Action column (for button)
+            case 15 -> Object.class; // Action column (for button)
             default -> super.getColumnClass(columnIndex);
         };
     }
@@ -47,15 +47,13 @@ public class DebtTableModel extends DefaultTableModel {
     @Override
     public void setValueAt(Object aValue, int row, int column) {
         DebtItem oldDebtItem = debtItems.get(row);
-        DebtItem updatedDebtItem;
-        switch (column) {
-            case 2 -> updatedDebtItem = oldDebtItem.toBuilder()
+        DebtItem updatedDebtItem = switch (column) {
+            case 2 -> oldDebtItem.toBuilder()
                     .withTitle((String) aValue)
                     .build();
-            case 3 -> updatedDebtItem =
-                    oldDebtItem.toBuilder()
-                            .withDescription((String) aValue)
-                            .build();
+            case 3 -> oldDebtItem.toBuilder()
+                    .withDescription((String) aValue)
+                    .build();
             case 5 -> {
                 int asInt;
                 if (aValue instanceof Number n) asInt = n.intValue();
@@ -68,28 +66,28 @@ public class DebtTableModel extends DefaultTableModel {
                 } else asInt = oldDebtItem.getWantedLevel();
                 // Clamp to [1..5]
                 int clamped = Math.max(1, Math.min(5, asInt));
-                updatedDebtItem = oldDebtItem.toBuilder()
-                        .withWantedLevel(clamped)
-                        .build();
                 // Also reflect the clamped value in the table model
                 aValue = clamped;
+                yield oldDebtItem.toBuilder()
+                        .withWantedLevel(clamped)
+                        .build();
             }
-            case 6 -> updatedDebtItem = oldDebtItem.toBuilder()
+            case 6 -> oldDebtItem.toBuilder()
                     .withComplexity((Complexity) aValue)
                     .build();
-            case 7 -> updatedDebtItem = oldDebtItem.toBuilder()
+            case 7 -> oldDebtItem.toBuilder()
                     .withStatus((Status) aValue)
                     .build();
-            case 8 -> updatedDebtItem = oldDebtItem.toBuilder()
+            case 8 -> oldDebtItem.toBuilder()
                     .withPriority((Priority) aValue)
                     .build();
-            case 9 -> updatedDebtItem = oldDebtItem.toBuilder()
+            case 9 -> oldDebtItem.toBuilder()
                     .withRisk((Risk) aValue)
                     .build();
-            case 10 -> updatedDebtItem = oldDebtItem.toBuilder()
+            case 10 -> oldDebtItem.toBuilder()
                     .withTargetVersion((String) aValue)
                     .build();
-            case 11 -> updatedDebtItem = oldDebtItem.toBuilder()
+            case 11 -> oldDebtItem.toBuilder()
                     .withComment((String) aValue)
                     .build();
             case 12 -> {
@@ -112,14 +110,17 @@ public class DebtTableModel extends DefaultTableModel {
                 }
                 // Clamp to non-negative
                 int clamped = Math.max(0, estimation);
-                updatedDebtItem = oldDebtItem.toBuilder()
-                        .withEstimation(clamped)
-                        .build();
                 // Also reflect the clamped value in the table model
                 aValue = clamped;
+                yield oldDebtItem.toBuilder()
+                        .withEstimation(clamped)
+                        .build();
             }
-            default -> updatedDebtItem = oldDebtItem;
-        }
+            case 13 -> oldDebtItem.toBuilder()
+                    .withJira((String) aValue)
+                    .build();
+            default -> oldDebtItem;
+        };
 
         if (!updatedDebtItem.equals(oldDebtItem)) {
             debtItems.set(row, updatedDebtItem);
@@ -144,6 +145,7 @@ public class DebtTableModel extends DefaultTableModel {
                 debtItem.getTargetVersion(),
                 debtItem.getComment(),
                 debtItem.getEstimation(),
+                debtItem.getJira(),
                 debtItem.getCurrentModule(),
                 null
         });
