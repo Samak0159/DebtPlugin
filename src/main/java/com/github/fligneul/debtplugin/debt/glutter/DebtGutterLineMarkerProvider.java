@@ -115,8 +115,8 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
 
                         LOG.debug("Selection of the file %s : line %s".formatted(currentFile, currentLine));
 
-                        project.getMessageBus().syncPublisher(DebtService.TOPIC).selectFile(currentFile);
-                        project.getMessageBus().syncPublisher(DebtService.TOPIC).selectLine(currentLine);
+                        project.getMessageBus().syncPublisher(DebtService.SELECTION_TOPIC).selectFile(currentFile);
+                        project.getMessageBus().syncPublisher(DebtService.SELECTION_TOPIC).selectLine(currentLine);
                     }
                 },
                 GutterIconRenderer.Alignment.LEFT,

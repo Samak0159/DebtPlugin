@@ -11,7 +11,7 @@ import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
 import com.github.fligneul.debtplugin.debt.toolkit.SwingComponentHelper;
-import com.github.fligneul.debtplugin.debt.toolwindow.DebtProviderService;
+import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;

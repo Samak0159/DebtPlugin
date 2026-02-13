@@ -1,8 +1,7 @@
-package com.github.fligneul.debtplugin.debt.toolwindow;
+package com.github.fligneul.debtplugin.debt.service;
 
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Repository;
-import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 

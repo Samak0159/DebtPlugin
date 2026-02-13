@@ -4,7 +4,7 @@ import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.toolkit.SwingComponentHelper;
-import com.github.fligneul.debtplugin.debt.toolwindow.DebtProviderService;
+import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.table.JBTable;

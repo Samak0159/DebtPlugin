@@ -1,4 +1,4 @@
-package com.github.fligneul.debtplugin.debt.toolwindow;
+package com.github.fligneul.debtplugin.debt.toolwindow.chart;
 
 import javax.swing.JPanel;
 import java.awt.BasicStroke;

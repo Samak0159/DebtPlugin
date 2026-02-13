@@ -1,7 +1,9 @@
-package com.github.fligneul.debtplugin.debt.toolwindow;
+package com.github.fligneul.debtplugin.debt.toolwindow.relationship;
 
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
 import com.github.fligneul.debtplugin.debt.model.Relationship;
+import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
+import com.intellij.openapi.project.Project;
 import com.intellij.ui.JBColor;
 
 import javax.swing.JPanel;
@@ -18,29 +20,34 @@ import java.util.List;
 import java.util.Map;
 
 public class RelationshipGraphPanel extends JPanel {
-    private List<DebtItem> items = new ArrayList<>();
-    private final Map<String, Point> nodePositions = new HashMap<>();
     private static final int NODE_WIDTH = 120;
     private static final int NODE_HEIGHT = 40;
     private static final int PADDING = 20;
 
-    public RelationshipGraphPanel() {
+    private final DebtProviderService debtProviderService;
+    private final List<DebtItem> items = new ArrayList<>();
+    private final Map<String, Point> nodePositions = new HashMap<>();
+
+    public RelationshipGraphPanel(final Project project) {
+        debtProviderService = project.getService(DebtProviderService.class);
         setBackground(JBColor.background());
     }
 
-    public void setData(List<DebtItem> newItems) {
+    public void update() {
         // Only keep items that have at least one link
-        final List<DebtItem> debtsWithLinks = newItems.stream()
+        final List<DebtItem> debtsWithLinks = debtProviderService.currentItems()
+                .stream()
                 .filter(debtItem -> !debtItem.getLinks().isEmpty())
                 .toList();
 
-        final List<DebtItem> linked = newItems.stream()
+        final List<DebtItem> linked = debtProviderService.currentItems()
+                .stream()
                 .filter(debtItem -> debtsWithLinks.stream()
                         .map(DebtItem::getLinks)
                         .anyMatch(links -> links.containsKey(debtItem.getId())))
                 .toList();
 
-        this.items = new ArrayList<>();
+        items.clear();
         items.addAll(debtsWithLinks);
         items.addAll(linked);
 

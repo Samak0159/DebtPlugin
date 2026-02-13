@@ -51,6 +51,7 @@ import java.util.Optional;
 @Service(Service.Level.PROJECT)
 public final class DebtService {
     public static final Topic<DebtServiceListener> TOPIC = Topic.create("Debt Service Changed", DebtServiceListener.class);
+    public static final Topic<DebtServiceSelectionListener> SELECTION_TOPIC = Topic.create("Select Changed", DebtServiceSelectionListener.class);
 
     private static final Logger LOG = Logger.getInstance(DebtService.class);
 
@@ -145,6 +146,7 @@ public final class DebtService {
 
         saveDebts(repoRoot);
 
+        refresh();
         refreshHighlighting();
     }
 
@@ -153,6 +155,18 @@ public final class DebtService {
                 .stream()
                 .filter(entry -> entry.getKey().getRepositoryAbsolutePath().equals(repoRoot))
                 .findFirst();
+    }
+
+    public LinkedHashMap<String, Integer> extractModules(final List<DebtItem> debts) {
+        final LinkedHashMap<String, Integer> modules = new LinkedHashMap<>();
+
+        for (DebtItem debtItem : debts) {
+            String module = debtItem.getCurrentModule();
+            if (module == null || module.isBlank()) module = "Unknown";
+            modules.put(module, modules.getOrDefault(module, 0) + 1);
+        }
+
+        return modules;
     }
 
     public synchronized void remove(@NotNull DebtItem debtItem) {

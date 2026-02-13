@@ -1,8 +1,10 @@
-package com.github.fligneul.debtplugin.debt.toolwindow;
+package com.github.fligneul.debtplugin.debt.toolwindow.action;
 
 import com.github.fligneul.debtplugin.debt.model.Repository;
+import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
+import com.github.fligneul.debtplugin.debt.toolwindow.MultiSelectFilter;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.Presentation;

@@ -1,6 +1,6 @@
 package com.github.fligneul.debtplugin.debt.action.links;
 
-import com.github.fligneul.debtplugin.debt.toolwindow.DebtProviderService;
+import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.intellij.ui.MutableCollectionComboBoxModel;
 import org.jetbrains.annotations.NotNull;
 

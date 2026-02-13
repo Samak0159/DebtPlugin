@@ -2,7 +2,7 @@ package com.github.fligneul.debtplugin.debt.settings;
 
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
-import com.github.fligneul.debtplugin.debt.toolwindow.ColumnService;
+import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBTextField;

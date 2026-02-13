@@ -1,4 +1,4 @@
-package com.github.fligneul.debtplugin.debt.toolwindow;
+package com.github.fligneul.debtplugin.debt.service;
 
 import com.intellij.openapi.components.Service;
 import org.jetbrains.annotations.NotNull;
@@ -91,12 +91,12 @@ public final class ColumnService {
      * Capture the original TableColumn instances from the JTable once.
      */
     public synchronized void attachTableColumns(@NotNull JTable table) {
-        TableColumnModel cm = table.getColumnModel();
-        for (int v = 0; v < cm.getColumnCount(); v++) {
-            TableColumn tc = cm.getColumn(v);
-            Column c = columnsByIndex.get(tc.getModelIndex());
-            if (c != null && c.getTableColumn() == null) {
-                c.setTableColumn(tc);
+        TableColumnModel tableColumnModel = table.getColumnModel();
+        for (int v = 0; v < tableColumnModel.getColumnCount(); v++) {
+            TableColumn tableColumn = tableColumnModel.getColumn(v);
+            Column column = columnsByIndex.get(tableColumn.getModelIndex());
+            if (column != null && column.getTableColumn() == null) {
+                column.setTableColumn(tableColumn);
             }
         }
     }

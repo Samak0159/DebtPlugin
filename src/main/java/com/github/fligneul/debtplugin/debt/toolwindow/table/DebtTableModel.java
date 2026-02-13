@@ -1,4 +1,4 @@
-package com.github.fligneul.debtplugin.debt.toolwindow;
+package com.github.fligneul.debtplugin.debt.toolwindow.table;
 
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
@@ -6,6 +6,7 @@ import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
+import com.github.fligneul.debtplugin.debt.service.ColumnService;
 
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;

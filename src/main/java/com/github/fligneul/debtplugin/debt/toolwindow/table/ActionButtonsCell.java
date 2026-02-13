@@ -1,4 +1,4 @@
-package com.github.fligneul.debtplugin.debt.toolwindow;
+package com.github.fligneul.debtplugin.debt.toolwindow.table;
 
 import com.intellij.icons.AllIcons;
 
