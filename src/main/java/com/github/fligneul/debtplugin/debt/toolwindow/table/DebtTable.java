@@ -88,16 +88,15 @@ public class DebtTable extends JBTable {
 
     private void initColumns() {
         final JComboBox<Complexity> complexityComboBox = new JComboBox<>(Complexity.values());
-        TableColumn col6 = this.getColumnModel().getColumn(6);
-        col6.setCellEditor(new DefaultCellEditor(complexityComboBox));
+        this.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(complexityComboBox));
 
         final JComboBox<Status> statusComboBox = new JComboBox<>(Status.values());
-        this.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(statusComboBox));
+        this.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(statusComboBox));
 
-        this.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(priorityComboBox));
+        this.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(priorityComboBox));
 
         final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
-        this.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(riskComboBox));
+        this.getColumnModel().getColumn(10).setCellEditor(new DefaultCellEditor(riskComboBox));
 
         final TableCellRenderer cellRenderer = new TableCellRenderer() {
             @Override
@@ -114,11 +113,11 @@ public class DebtTable extends JBTable {
                 }
             }
         };
-        this.getColumnModel().getColumn(15).setCellRenderer(cellRenderer);
         this.getColumnModel().getColumn(16).setCellRenderer(cellRenderer);
+        this.getColumnModel().getColumn(17).setCellRenderer(cellRenderer);
 
-        // Action buttons (Edit + Delete) column is at index 17
-        final TableColumn actionCol = this.getColumnModel().getColumn(17);
+        // Action buttons (Edit + Delete) column is at index 18
+        final TableColumn actionCol = this.getColumnModel().getColumn(18);
         final ActionButtonsCell actionButtons = new ActionButtonsCell(editAction(), deleteAction());
         actionCol.setCellRenderer(actionButtons);
         actionCol.setCellEditor(actionButtons);
@@ -208,8 +207,8 @@ public class DebtTable extends JBTable {
     }
 
     private void applyWrappingRenderers() {
-        setWrappingRendererForModelColumn(3);  // Description
-        setWrappingRendererForModelColumn(11); // Comment
+        setWrappingRendererForModelColumn(4);  // Description
+        setWrappingRendererForModelColumn(12); // Comment
     }
 
     private void setWrappingRendererForModelColumn(int modelIndex) {
@@ -221,8 +220,8 @@ public class DebtTable extends JBTable {
     private void adjustRowHeightFor(int viewRow) {
         if (viewRow < 0 || viewRow >= this.getRowCount()) return;
         int maxHeight = defaultRowHeight > 0 ? defaultRowHeight : this.getRowHeight();
-        maxHeight = Math.max(maxHeight, preferredHeightForCell(viewRow, 3)); // Description
-        maxHeight = Math.max(maxHeight, preferredHeightForCell(viewRow, 11)); // Comment
+        maxHeight = Math.max(maxHeight, preferredHeightForCell(viewRow, 4)); // Description
+        maxHeight = Math.max(maxHeight, preferredHeightForCell(viewRow, 12)); // Comment
         if (maxHeight != this.getRowHeight(viewRow)) {
             this.setRowHeight(viewRow, maxHeight);
         }

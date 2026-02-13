@@ -25,23 +25,23 @@ public class DebtTableModel extends DefaultTableModel {
 
     @Override
     public boolean isCellEditable(int row, int column) {
-        return column >= 2
-                && column != 4
-                && column != 15
-                && column != 16;
+        return column >= 3
+                && column != 5
+                && column != 16
+                && column != 17;
     }
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
         return switch (columnIndex) {
-            case 5 -> Integer.class;        // WantedLevel column
-            case 6 -> Complexity.class;     // Complexity column
-            case 7 -> Status.class;         // Status column
-            case 9 -> Risk.class;           // Risk column
-            case 12 -> Integer.class;       // Estimation column
-            case 15 -> Integer.class;       // CreationDate column
-            case 16 -> Integer.class;       // UpdateDate column
-            case 17 -> Object.class;        // Action column (for button)
+            case 6 -> Integer.class;        // WantedLevel column
+            case 7 -> Complexity.class;     // Complexity column
+            case 8 -> Status.class;         // Status column
+            case 10 -> Risk.class;           // Risk column
+            case 13 -> Integer.class;       // Estimation column
+            case 16 -> Integer.class;       // CreationDate column
+            case 17 -> Integer.class;       // UpdateDate column
+            case 18 -> Object.class;        // Action column (for button)
             default -> super.getColumnClass(columnIndex);
         };
     }
@@ -50,13 +50,13 @@ public class DebtTableModel extends DefaultTableModel {
     public void setValueAt(Object aValue, int row, int column) {
         DebtItem oldDebtItem = debtItems.get(row);
         DebtItem updatedDebtItem = switch (column) {
-            case 2 -> oldDebtItem.toBuilder()
+            case 3 -> oldDebtItem.toBuilder()
                     .withTitle((String) aValue)
                     .build();
-            case 3 -> oldDebtItem.toBuilder()
+            case 4 -> oldDebtItem.toBuilder()
                     .withDescription((String) aValue)
                     .build();
-            case 5 -> {
+            case 6 -> {
                 int asInt;
                 if (aValue instanceof Number n) asInt = n.intValue();
                 else if (aValue instanceof String s) {
@@ -74,25 +74,25 @@ public class DebtTableModel extends DefaultTableModel {
                         .withWantedLevel(clamped)
                         .build();
             }
-            case 6 -> oldDebtItem.toBuilder()
+            case 7 -> oldDebtItem.toBuilder()
                     .withComplexity((Complexity) aValue)
                     .build();
-            case 7 -> oldDebtItem.toBuilder()
+            case 8 -> oldDebtItem.toBuilder()
                     .withStatus((Status) aValue)
                     .build();
-            case 8 -> oldDebtItem.toBuilder()
+            case 9 -> oldDebtItem.toBuilder()
                     .withPriority((String) aValue)
                     .build();
-            case 9 -> oldDebtItem.toBuilder()
+            case 10 -> oldDebtItem.toBuilder()
                     .withRisk((Risk) aValue)
                     .build();
-            case 10 -> oldDebtItem.toBuilder()
+            case 11 -> oldDebtItem.toBuilder()
                     .withTargetVersion((String) aValue)
                     .build();
-            case 11 -> oldDebtItem.toBuilder()
+            case 12 -> oldDebtItem.toBuilder()
                     .withComment((String) aValue)
                     .build();
-            case 12 -> {
+            case 13 -> {
                 int estimation;
                 if (aValue instanceof Number n) {
                     estimation = n.intValue();
@@ -118,7 +118,7 @@ public class DebtTableModel extends DefaultTableModel {
                         .withEstimation(clamped)
                         .build();
             }
-            case 13 -> oldDebtItem.toBuilder()
+            case 14 -> oldDebtItem.toBuilder()
                     .withJira((String) aValue)
                     .build();
             default -> oldDebtItem;
@@ -134,6 +134,7 @@ public class DebtTableModel extends DefaultTableModel {
     public void addDebtItem(DebtItem debtItem) {
         debtItems.add(debtItem);
         addRow(new Object[]{
+                debtItem.getId(),
                 displayedFile(debtItem.getFile()),
                 debtItem.getLine(),
                 debtItem.getTitle(),

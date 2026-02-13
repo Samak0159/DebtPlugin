@@ -40,7 +40,7 @@ public class DebtTableFilter extends JPanel {
 
     private final JButton toggleFiltersButton = new JButton("-"); // Expanded state shows "-"
     private final MultiSelectFilter<Integer> columnSelector = new MultiSelectFilter<>("Columns");
-    private final JTextField fileFilter = new JTextField(8);
+    private final JTextField fileFilter = new JTextField(10);
     private final JTextField lineFilter = new JTextField(5);
     private final JTextField titleFilter = new JTextField(8);
     private final JTextField descFilter = new JTextField(8);
@@ -205,22 +205,22 @@ public class DebtTableFilter extends JPanel {
     private void applyFilters() {
         List<RowFilter<DebtTableModel, Object>> filters = new ArrayList<>();
 
-        addTextFilter(filters, fileFilter.getText(), 0);
-        addTextExactFilter(filters, lineFilter.getText(), 1);
-        addTextFilter(filters, titleFilter.getText(), 2);
-        addTextFilter(filters, descFilter.getText(), 3);
-        addTextFilter(filters, userFilter.getText(), 4);
+        addTextFilter(filters, fileFilter.getText(), 1);
+        addTextExactFilter(filters, lineFilter.getText(), 2);
+        addTextFilter(filters, titleFilter.getText(), 3);
+        addTextFilter(filters, descFilter.getText(), 4);
+        addTextFilter(filters, userFilter.getText(), 5);
 
-        addMultiSelectExact(filters, wantedLevelFilter.getSelected(), 5);
-        addMultiSelectExact(filters, complexityFilter.getSelected(), 6);
-        addMultiSelectExact(filters, statusFilter.getSelected(), 7);
-        addMultiSelectExact(filters, priorityFilter.getSelected(), 8);
-        addMultiSelectExact(filters, riskFilter.getSelected(), 9);
+        addMultiSelectExact(filters, wantedLevelFilter.getSelected(), 6);
+        addMultiSelectExact(filters, complexityFilter.getSelected(), 7);
+        addMultiSelectExact(filters, statusFilter.getSelected(), 8);
+        addMultiSelectExact(filters, priorityFilter.getSelected(), 9);
+        addMultiSelectExact(filters, riskFilter.getSelected(), 10);
 
-        addTextFilter(filters, targetVersionFilter.getText(), 10);
-        addTextFilter(filters, commentFilter.getText(), 11);
-        addMultiSelectExact(filters, estimationFilter.getSelected(), 12);
-        addTextFilter(filters, jiraFilter.getText(), 13);
+        addTextFilter(filters, targetVersionFilter.getText(), 11);
+        addTextFilter(filters, commentFilter.getText(), 12);
+        addMultiSelectExact(filters, estimationFilter.getSelected(), 13);
+        addTextFilter(filters, jiraFilter.getText(), 14);
 
         final Set<String> modulesSelected = moduleFilter.getSelected()
                 .stream()
@@ -228,7 +228,7 @@ public class DebtTableFilter extends JPanel {
                         ? ""
                         : value)
                 .collect(Collectors.toSet());
-        addMultiSelectExact(filters, modulesSelected, 14);
+        addMultiSelectExact(filters, modulesSelected, 15);
 
         if (filters.isEmpty()) {
             sorter.setRowFilter(null);
