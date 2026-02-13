@@ -2,7 +2,6 @@ package com.github.fligneul.debtplugin.debt.toolwindow.chart;
 
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
-import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
@@ -39,7 +38,7 @@ public class DebtChartFilter extends JPanel {
     private final MultiSelectFilter<Integer> wantedLevelFilterChart = new MultiSelectFilter<>("WantedLevel");
     private final MultiSelectFilter<Complexity> complexityFilterChart = new MultiSelectFilter<>("Complexity");
     private final MultiSelectFilter<Status> statusFilterChart = new MultiSelectFilter<>("Status");
-    private final MultiSelectFilter<Priority> priorityFilterChart = new MultiSelectFilter<>("Priority");
+    private final MultiSelectFilter<String> priorityFilterChart = new MultiSelectFilter<>("Priority");
     private final MultiSelectFilter<Risk> riskFilterChart = new MultiSelectFilter<>("Risk");
     private final JTextField targetVersionFilterChart = new JTextField(6);
     private final JTextField commentFilterChart = new JTextField(8);
@@ -57,7 +56,6 @@ public class DebtChartFilter extends JPanel {
         // Configure chart tab enum filters as well
         complexityFilterChart.setOptions(Arrays.asList(Complexity.values()));
         statusFilterChart.setOptions(Arrays.asList(Status.values()));
-        priorityFilterChart.setOptions(Arrays.asList(Priority.values()));
         riskFilterChart.setOptions(Arrays.asList(Risk.values()));
 
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -171,15 +169,18 @@ public class DebtChartFilter extends JPanel {
     }
 
     public void updateFilters() {
+        final TreeSet<String> priorities = new TreeSet<>(Comparator.naturalOrder());
         final TreeSet<Integer> wantedLevels = new TreeSet<>(Comparator.naturalOrder());
         final TreeSet<Integer> estimations = new TreeSet<>(Comparator.naturalOrder());
 
         for (DebtItem item : debtProviderService.currentItems()) {
+            priorities.add(item.getPriority());
             wantedLevels.add(item.getWantedLevel());
             estimations.add(item.getEstimation());
         }
 
         // Aggregate modules from items that match the chart-specific filters
+        priorityFilterChart.setOptions(priorities);
         wantedLevelFilterChart.setOptions(wantedLevels);
         estimationFilterChart.setOptions(estimations);
 

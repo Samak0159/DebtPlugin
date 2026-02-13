@@ -4,7 +4,6 @@ import com.github.fligneul.debtplugin.debt.listener.DebtDocumentListener;
 import com.github.fligneul.debtplugin.debt.listener.DebtVfsListener;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
-import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
@@ -47,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Service(Service.Level.PROJECT)
 public final class DebtService {
@@ -477,6 +477,15 @@ public final class DebtService {
         project.getMessageBus().syncPublisher(TOPIC).refresh();
     }
 
+    public void getDistinctPriorities(final List<DebtItem> debtItems, final Consumer<String> priorityConsumer) {
+        debtItems
+                .stream()
+                .map(DebtItem::getPriority)
+                .sorted()
+                .distinct()
+                .forEach(priorityConsumer);
+    }
+
     //TODO Should be private. split this sevice with WriterService
     @VisibleForTesting
     public static final class DebtItemDeserializer implements JsonDeserializer<DebtItem> {
@@ -497,7 +506,7 @@ public final class DebtService {
 
             Complexity complexity = parseEnum(obj, "complexity", Complexity.Medium, Complexity.class);
             Status status = parseEnum(obj, "status", Status.Submitted, Status.class);
-            Priority priority = parseEnum(obj, "priority", Priority.Medium, Priority.class);
+            String priority = getAsString(obj, "priority", "");
             Risk risk = parseEnum(obj, "risk", Risk.Medium, Risk.class);
 
             String targetVersion = getAsString(obj, "targetVersion", "");

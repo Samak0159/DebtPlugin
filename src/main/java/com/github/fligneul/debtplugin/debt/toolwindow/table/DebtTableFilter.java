@@ -1,7 +1,6 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.table;
 
 import com.github.fligneul.debtplugin.debt.model.Complexity;
-import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.ColumnService;
@@ -49,7 +48,7 @@ public class DebtTableFilter extends JPanel {
     private final MultiSelectFilter<Integer> wantedLevelFilter = new MultiSelectFilter<>("WantedLevel");
     private final MultiSelectFilter<Complexity> complexityFilter = new MultiSelectFilter<>("Complexity");
     private final MultiSelectFilter<Status> statusFilter = new MultiSelectFilter<>("Status");
-    private final MultiSelectFilter<Priority> priorityFilter = new MultiSelectFilter<>("Priority");
+    private final MultiSelectFilter<String> priorityFilter = new MultiSelectFilter<>("Priority");
     private final MultiSelectFilter<Risk> riskFilter = new MultiSelectFilter<>("Risk");
     private final JTextField targetVersionFilter = new JTextField(6);
     private final JTextField commentFilter = new JTextField(8);
@@ -200,7 +199,6 @@ public class DebtTableFilter extends JPanel {
         // Configure multi-select enum filters
         complexityFilter.setOptions(Arrays.asList(Complexity.values()));
         statusFilter.setOptions(Arrays.asList(Status.values()));
-        priorityFilter.setOptions(Arrays.asList(Priority.values()));
         riskFilter.setOptions(Arrays.asList(Risk.values()));
     }
 
@@ -294,11 +292,6 @@ public class DebtTableFilter extends JPanel {
         }
     }
 
-
-    public MultiSelectFilter<Integer> getColumnSelector() {
-        return columnSelector;
-    }
-
     public void setFileFilterValue(final String file) {
         fileFilter.setText(file);
     }
@@ -307,16 +300,13 @@ public class DebtTableFilter extends JPanel {
         lineFilter.setText(line);
     }
 
-    public void updateFilters(final TreeSet<Integer> wantedLevels, final TreeSet<Integer> estimations) {
+    public void updateFilters(final TreeSet<String> priorities, final TreeSet<Integer> wantedLevels, final TreeSet<Integer> estimations) {
         final LinkedHashMap<String, Integer> modules = debtService.extractModules(debtProviderService.currentItems());
 
         moduleFilter.setOptions(modules.keySet());
 
-        // Populate wanted level options for both tabs
+        priorityFilter.setOptions(priorities);
         wantedLevelFilter.setOptions(wantedLevels);
-
-
-        // Populate estimation options for both tabs
         estimationFilter.setOptions(estimations);
 
         // Sync selector selection to currently visible columns

@@ -3,15 +3,14 @@ package com.github.fligneul.debtplugin.debt.action;
 import com.github.fligneul.debtplugin.debt.action.links.LinksComponent;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
-import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
+import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
 import com.github.fligneul.debtplugin.debt.toolkit.SwingComponentHelper;
-import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
@@ -26,10 +25,14 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
+import javax.swing.JTextField;
+import javax.swing.ListCellRenderer;
 import javax.swing.SpinnerNumberModel;
+import java.awt.Component;
 import java.io.File;
 import java.util.Map;
 import java.util.UUID;
@@ -45,7 +48,7 @@ public class AddDebtDialog extends DialogWrapper {
     private final JSpinner wantedLevelSpinner = new JSpinner(new SpinnerNumberModel(3, 1, 5, 1));
     private final JComboBox<Complexity> complexityComboBox = new JComboBox<>(Complexity.values());
     private final JComboBox<Status> statusComboBox = new JComboBox<>(Status.values());
-    private final JComboBox<Priority> priorityComboBox = new JComboBox<>(Priority.values());
+    private final JComboBox<String> priorityComboBox = new JComboBox<>();
     private final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
     private final JBTextField targetVersionField = new JBTextField();
     private final JSpinner estimationSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
@@ -65,7 +68,7 @@ public class AddDebtDialog extends DialogWrapper {
     private int wantedLevel = 3;
     private Complexity complexity = Complexity.Medium;
     private Status status = Status.Submitted;
-    private Priority priority = Priority.Medium;
+    private String priority = "";
     private Risk risk = Risk.Medium;
     private String targetVersion = "";
     private int estimation = 0;
@@ -188,7 +191,7 @@ public class AddDebtDialog extends DialogWrapper {
                 panel.repaint();
             }
         });
-        
+
         // Add document listener to file field to update repository combobox visibility
         fileField.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
@@ -240,6 +243,18 @@ public class AddDebtDialog extends DialogWrapper {
         panel.add(statusRow);
 
         final JPanel priorityRow = SwingComponentHelper.labeled("Priority:", priorityComboBox);
+        priorityComboBox.setEditable(true);
+        priorityComboBox.setRenderer(new ListCellRenderer<String>() {
+            @Override
+            public Component getListCellRendererComponent(final JList<? extends String> list, final String value, final int index, final boolean isSelected, final boolean cellHasFocus) {
+                if (index == 0) {
+                    return new JTextField(value);
+                } else {
+                    return new JLabel(value);
+                }
+            }
+        });
+        debtService.getDistinctPriorities(debtProviderService.currentItems(), priorityComboBox::addItem);
         priorityRow.setVisible(isEdit);
         panel.add(priorityRow);
 
@@ -289,7 +304,7 @@ public class AddDebtDialog extends DialogWrapper {
         this.wantedLevel = (val instanceof Number) ? ((Number) val).intValue() : 3;
         this.complexity = (Complexity) complexityComboBox.getSelectedItem();
         this.status = (Status) statusComboBox.getSelectedItem();
-        this.priority = (Priority) priorityComboBox.getSelectedItem();
+        this.priority = (String) priorityComboBox.getSelectedItem();
         this.risk = (Risk) riskComboBox.getSelectedItem();
         this.targetVersion = targetVersionField.getText();
         this.links = linksComponent == null
@@ -337,7 +352,7 @@ public class AddDebtDialog extends DialogWrapper {
         return status;
     }
 
-    public Priority getPriority() {
+    public String getPriority() {
         return priority;
     }
 
@@ -360,6 +375,7 @@ public class AddDebtDialog extends DialogWrapper {
     public Repository getSelectedRepository() {
         return selectedRepository;
     }
+
     public String getJira() {
         return jira;
     }

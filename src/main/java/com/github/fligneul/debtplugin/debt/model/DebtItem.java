@@ -17,7 +17,7 @@ public class DebtItem {
     private final int wantedLevel;
     private final Complexity complexity;
     private final Status status;
-    private final Priority priority;
+    private final String priority;
     private final Risk risk;
     private final String targetVersion;
     private final String comment;
@@ -39,7 +39,7 @@ public class DebtItem {
         this.wantedLevel = 3;
         this.complexity = Complexity.Medium;
         this.status = Status.Submitted;
-        this.priority = Priority.Medium;
+        this.priority = "";
         this.risk = Risk.Medium;
         this.targetVersion = "";
         this.comment = "";
@@ -126,7 +126,7 @@ public class DebtItem {
     }
 
     @NotNull
-    public Priority getPriority() {
+    public String getPriority() {
         return priority;
     }
 
@@ -219,7 +219,7 @@ public class DebtItem {
         private int wantedLevel;
         private Complexity complexity;
         private Status status;
-        private Priority priority;
+        private String priority;
         private Risk risk;
         private String targetVersion;
         private String comment;
@@ -301,7 +301,7 @@ public class DebtItem {
             return this;
         }
 
-        public Builder withPriority(final Priority priority) {
+        public Builder withPriority(final String priority) {
             this.priority = priority;
             return this;
         }

@@ -2,11 +2,10 @@ package com.github.fligneul.debtplugin.debt.toolwindow.table;
 
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
-import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
-import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.ColumnService;
+import com.github.fligneul.debtplugin.debt.service.DebtService;
 
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
@@ -37,7 +36,6 @@ public class DebtTableModel extends DefaultTableModel {
             case 5 -> Integer.class; // WantedLevel column
             case 6 -> Complexity.class; // Complexity column
             case 7 -> Status.class; // Status column
-            case 8 -> Priority.class; // Priority column
             case 9 -> Risk.class; // Risk column
             case 12 -> Integer.class; // Estimation column
             case 15 -> Object.class; // Action column (for button)
@@ -80,7 +78,7 @@ public class DebtTableModel extends DefaultTableModel {
                     .withStatus((Status) aValue)
                     .build();
             case 8 -> oldDebtItem.toBuilder()
-                    .withPriority((Priority) aValue)
+                    .withPriority((String) aValue)
                     .build();
             case 9 -> oldDebtItem.toBuilder()
                     .withRisk((Risk) aValue)

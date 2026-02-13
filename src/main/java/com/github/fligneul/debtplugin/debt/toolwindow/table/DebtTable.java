@@ -3,11 +3,11 @@ package com.github.fligneul.debtplugin.debt.toolwindow.table;
 import com.github.fligneul.debtplugin.debt.action.AddDebtDialog;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
-import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.ColumnService;
+import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.intellij.openapi.diagnostic.Logger;
@@ -44,8 +44,10 @@ public class DebtTable extends JBTable {
     private final Project project;
     private final DebtService debtService;
     private final ColumnService columnService;
+    private DebtProviderService debtProviderService;
     private final DebtTableModel tableModel;
     private final int defaultRowHeight;
+    private final JComboBox<String> priorityComboBox = new JComboBox<>();
 
     public DebtTable(final Project project,
                      final DebtService debtService,
@@ -53,6 +55,7 @@ public class DebtTable extends JBTable {
         this.project = project;
         this.debtService = debtService;
         this.columnService = columnService;
+        this.debtProviderService = project.getService(DebtProviderService.class);
 
         this.tableModel = new DebtTableModel(debtService, columnService);
         this.setModel(tableModel);
@@ -85,7 +88,6 @@ public class DebtTable extends JBTable {
         final JComboBox<Status> statusComboBox = new JComboBox<>(Status.values());
         this.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(statusComboBox));
 
-        final JComboBox<Priority> priorityComboBox = new JComboBox<>(Priority.values());
         this.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(priorityComboBox));
 
         final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
@@ -159,6 +161,10 @@ public class DebtTable extends JBTable {
     }
 
     public void updateTable() {
+        priorityComboBox.removeAllItems();
+
+        debtService.getDistinctPriorities(debtProviderService.currentItems(), priorityComboBox::addItem);
+
         applyColumnVisibilityFromSettings();
 
         // Ensure row heights match wrapped content after data refresh
