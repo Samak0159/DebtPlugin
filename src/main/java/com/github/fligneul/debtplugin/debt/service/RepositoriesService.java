@@ -56,19 +56,17 @@ public final class RepositoriesService {
     }
 
     /**
-     * Read .idea/misc.xml and extract Maven root folders from
-     * component[name="MavenProjectsManager"] > option[name="originalFiles"] > list > option[value]
-     * Each value typically points to a pom.xml. This method returns the parent directories
-     * of those POM files as absolute, normalized paths. If the file is missing or cannot be parsed,
-     * an empty list is returned.
+     * Read .idea/vcs.xml and extract Maven root folders from
+     * component[name="VcsDirectoryMappings"] > mapping[name="directory"]
+     * If the file is missing or cannot be parsed, an empty list is returned.
      */
-    private List<String> getMavenOriginalRootFoldersFromIdeaMisc() {
+    private List<String> getMavenOriginalRootFoldersFromIdeaVsc() {
         try {
             String basePath = project.getBasePath();
             if (basePath == null || basePath.isBlank()) return Collections.emptyList();
-            File misc = new File(basePath, ".idea/misc.xml");
+            final File misc = new File(basePath, ".idea/vcs.xml");
             if (!misc.exists()) {
-                LOG.error("file misc do not exist ? path :" + misc.getAbsolutePath());
+                LOG.error("file vcs do not exist ? path :" + misc.getAbsolutePath());
                 return Collections.emptyList();
             }
 
@@ -86,27 +84,21 @@ public final class RepositoriesService {
             for (int i = 0; i < components.getLength(); i++) {
                 Element comp = (Element) components.item(i);
                 String name = comp.getAttribute("name");
-                if (!"MavenProjectsManager".equals(name)) continue;
+                if (!"VcsDirectoryMappings".equals(name)) continue;
                 // Find option[name="originalFiles"]
-                NodeList options = comp.getElementsByTagName("option");
-                for (int j = 0; j < options.getLength(); j++) {
-                    Element opt = (Element) options.item(j);
-                    if (!"originalFiles".equals(opt.getAttribute("name"))) continue;
-                    // Expect a child <list> with <option value="..."> elements
-                    NodeList lists = opt.getElementsByTagName("list");
-                    for (int k = 0; k < lists.getLength(); k++) {
-                        Element list = (Element) lists.item(k);
-                        NodeList fileOpts = list.getElementsByTagName("option");
-                        for (int m = 0; m < fileOpts.getLength(); m++) {
-                            Element fopt = (Element) fileOpts.item(m);
-                            String raw = fopt.getAttribute("value");
-                            if (raw == null || raw.isBlank()) continue;
-                            String resolved = resolveIdeaPathVariable(raw, basePath);
-                            Path p = Paths.get(resolved).toAbsolutePath().normalize();
-                            Path dir = p.getParent();
-                            if (dir != null) roots.add(dir.toString());
-                        }
+                final NodeList mappings = comp.getElementsByTagName("mapping");
+                for (int j = 0; j < mappings.getLength(); j++) {
+                    Element opt = (Element) mappings.item(j);
+                    final String directory = opt.getAttribute("directory");
+
+                    final Path dir;
+                    if (directory.isBlank()) {
+                        dir = Paths.get(basePath);
+                    } else {
+                        final String resolved = resolveIdeaPathVariable(directory, basePath);
+                        dir = Paths.get(resolved).toAbsolutePath().normalize();
                     }
+                    roots.add(dir.toString());
                 }
             }
             return new ArrayList<>(roots);
@@ -146,7 +138,7 @@ public final class RepositoriesService {
      * @return
      */
     public void refreshFromMisc() {
-        List<String> roots = getMavenOriginalRootFoldersFromIdeaMisc();
+        List<String> roots = getMavenOriginalRootFoldersFromIdeaVsc();
         setRepositories(convertRootPathsToRepositories(roots));
     }
 
