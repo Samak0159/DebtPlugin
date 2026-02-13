@@ -88,16 +88,15 @@ public class DebtTable extends JBTable {
 
     private void initColumns() {
         final JComboBox<Complexity> complexityComboBox = new JComboBox<>(Complexity.values());
-        TableColumn col6 = this.getColumnModel().getColumn(6);
-        col6.setCellEditor(new DefaultCellEditor(complexityComboBox));
+        this.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(complexityComboBox));
 
         final JComboBox<Status> statusComboBox = new JComboBox<>(Status.values());
-        this.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(statusComboBox));
+        this.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(statusComboBox));
 
-        this.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(priorityComboBox));
+        this.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(priorityComboBox));
 
         final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
-        this.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(riskComboBox));
+        this.getColumnModel().getColumn(10).setCellEditor(new DefaultCellEditor(riskComboBox));
 
         final TableCellRenderer cellRenderer = new TableCellRenderer() {
             @Override
@@ -114,11 +113,11 @@ public class DebtTable extends JBTable {
                 }
             }
         };
-        this.getColumnModel().getColumn(15).setCellRenderer(cellRenderer);
         this.getColumnModel().getColumn(16).setCellRenderer(cellRenderer);
+        this.getColumnModel().getColumn(17).setCellRenderer(cellRenderer);
 
-        // Action buttons (Edit + Delete) column is at index 17
-        final TableColumn actionCol = this.getColumnModel().getColumn(17);
+        // Action buttons (Edit + Delete) column is at index 18
+        final TableColumn actionCol = this.getColumnModel().getColumn(18);
         final ActionButtonsCell actionButtons = new ActionButtonsCell(editAction(), deleteAction());
         actionCol.setCellRenderer(actionButtons);
         actionCol.setCellEditor(actionButtons);

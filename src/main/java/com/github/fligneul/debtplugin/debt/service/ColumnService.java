@@ -62,24 +62,25 @@ public final class ColumnService {
 
     public ColumnService() {
         String[] names = new String[]{
-                "File",         // 0
-                "Line",         // 1
-                "Title",        // 2
-                "Description",  // 3
-                "User",         // 4
-                "WantedLevel",  // 5
-                "Complexity",   // 6
-                "Status",       // 7
-                "Priority",     // 8
-                "Risk",         // 9
-                "TargetVersion",// 10
-                "Comment",      // 11
-                "Estimation",   // 12
-                "Jira",         // 13
-                "Module",       // 14
-                "CreationDate", // 15
-                "UpdateDate",   // 16
-                ""              // 17 actions (empty header)
+                "ID",           // 0
+                "File",         // 1
+                "Line",         // 2
+                "Title",        // 3
+                "Description",  // 4
+                "User",         // 5
+                "WantedLevel",  // 6
+                "Complexity",   // 7
+                "Status",       // 8
+                "Priority",     // 9
+                "Risk",         // 10
+                "TargetVersion",// 11
+                "Comment",      // 12
+                "Estimation",   // 13
+                "Jira",         // 14
+                "Module",       // 15
+                "CreationDate", // 16
+                "UpdateDate",   // 17
+                ""              // 18 actions (empty header)
         };
 
         for (int i = 0; i < names.length; i++) {
