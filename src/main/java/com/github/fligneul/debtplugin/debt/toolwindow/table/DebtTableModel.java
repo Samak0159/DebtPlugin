@@ -25,20 +25,23 @@ public class DebtTableModel extends DefaultTableModel {
 
     @Override
     public boolean isCellEditable(int row, int column) {
-        // Make the first two columns (File and Line) non-editable
-        // Keep the User column (4) non-editable; Delete button column (13) must be editable for the button
-        return (column >= 2) && (column != 4);
+        return column >= 2
+                && column != 4
+                && column != 15
+                && column != 16;
     }
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
         return switch (columnIndex) {
-            case 5 -> Integer.class; // WantedLevel column
-            case 6 -> Complexity.class; // Complexity column
-            case 7 -> Status.class; // Status column
-            case 9 -> Risk.class; // Risk column
-            case 12 -> Integer.class; // Estimation column
-            case 15 -> Object.class; // Action column (for button)
+            case 5 -> Integer.class;        // WantedLevel column
+            case 6 -> Complexity.class;     // Complexity column
+            case 7 -> Status.class;         // Status column
+            case 9 -> Risk.class;           // Risk column
+            case 12 -> Integer.class;       // Estimation column
+            case 15 -> Integer.class;       // CreationDate column
+            case 16 -> Integer.class;       // UpdateDate column
+            case 17 -> Object.class;        // Action column (for button)
             default -> super.getColumnClass(columnIndex);
         };
     }
@@ -146,6 +149,8 @@ public class DebtTableModel extends DefaultTableModel {
                 debtItem.getEstimation(),
                 debtItem.getJira(),
                 debtItem.getCurrentModule(),
+                debtItem.getCreationDate(),
+                debtItem.getUpdateDate(),
                 null
         });
     }

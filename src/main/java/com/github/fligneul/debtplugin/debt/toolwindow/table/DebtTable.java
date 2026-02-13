@@ -20,6 +20,7 @@ import com.intellij.ui.table.JBTable;
 
 import javax.swing.DefaultCellEditor;
 import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.event.ChangeEvent;
@@ -34,6 +35,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.function.IntConsumer;
@@ -44,7 +48,8 @@ public class DebtTable extends JBTable {
     private final Project project;
     private final DebtService debtService;
     private final ColumnService columnService;
-    private DebtProviderService debtProviderService;
+    private final DebtProviderService debtProviderService;
+    private final DebtSettings settings;
     private final DebtTableModel tableModel;
     private final int defaultRowHeight;
     private final JComboBox<String> priorityComboBox = new JComboBox<>();
@@ -56,6 +61,7 @@ public class DebtTable extends JBTable {
         this.debtService = debtService;
         this.columnService = columnService;
         this.debtProviderService = project.getService(DebtProviderService.class);
+        this.settings = project.getService(DebtSettings.class);
 
         this.tableModel = new DebtTableModel(debtService, columnService);
         this.setModel(tableModel);
@@ -93,8 +99,26 @@ public class DebtTable extends JBTable {
         final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
         this.getColumnModel().getColumn(9).setCellEditor(new DefaultCellEditor(riskComboBox));
 
-        // Action buttons (Edit + Delete) column is at index 15
-        final TableColumn actionCol = this.getColumnModel().getColumn(15);
+        final TableCellRenderer cellRenderer = new TableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(final JTable table, final Object value, final boolean isSelected, final boolean hasFocus, final int row, final int column) {
+                if (value instanceof Long timestamp) {
+                    final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(settings.getState().getDatePattern())
+                            .withZone(ZoneId.systemDefault());
+
+                    final String date = formatter.format(Instant.ofEpochSecond(timestamp));
+
+                    return new JLabel(date);
+                } else {
+                    return null;
+                }
+            }
+        };
+        this.getColumnModel().getColumn(15).setCellRenderer(cellRenderer);
+        this.getColumnModel().getColumn(16).setCellRenderer(cellRenderer);
+
+        // Action buttons (Edit + Delete) column is at index 17
+        final TableColumn actionCol = this.getColumnModel().getColumn(17);
         final ActionButtonsCell actionButtons = new ActionButtonsCell(editAction(), deleteAction());
         actionCol.setCellRenderer(actionButtons);
         actionCol.setCellEditor(actionButtons);

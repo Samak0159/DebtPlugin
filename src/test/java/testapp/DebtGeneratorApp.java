@@ -2,7 +2,6 @@ package testapp;
 
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
-import com.github.fligneul.debtplugin.debt.model.Priority;
 import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
@@ -30,7 +29,6 @@ public class DebtGeneratorApp {
         for (int i = 0; i < nbDebtExpected; i++) {
             final Complexity complexity = Complexity.values()[random.nextInt(0, Complexity.values().length)];
             final Status status = Status.values()[random.nextInt(0, Status.values().length)];
-            final Priority priority = Priority.values()[random.nextInt(0, Priority.values().length)];
             final Risk risk = Risk.values()[random.nextInt(0, Risk.values().length)];
 
 
@@ -44,7 +42,7 @@ public class DebtGeneratorApp {
                     .withWantedLevel(random.nextInt(1, 6))
                     .withComplexity(complexity)
                     .withStatus(status)
-                    .withPriority(priority)
+                    .withPriority(generateRandomString(10))
                     .withRisk(risk)
                     .withTargetVersion("")
                     .withComment(generateRandomString(100))

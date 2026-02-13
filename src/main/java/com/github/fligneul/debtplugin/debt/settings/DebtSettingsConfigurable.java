@@ -1,8 +1,8 @@
 package com.github.fligneul.debtplugin.debt.settings;
 
+import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
-import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBTextField;
@@ -45,6 +45,7 @@ public class DebtSettingsConfigurable implements Configurable {
     // Columns UI
     private final JPanel columnsPanel = new JPanel();
     private final Map<String, JCheckBox> columnChecks = new LinkedHashMap<>(); // name -> checkbox
+    private JBTextField datePatternField;
 
     public DebtSettingsConfigurable(Project project) {
         this.project = project;
@@ -60,9 +61,9 @@ public class DebtSettingsConfigurable implements Configurable {
     @Override
     public @Nullable JComponent createComponent() {
         usernameField.setText(settings.getOrInitUsername());
+        datePatternField = new JBTextField(settings.getState().getDatePattern());
 
         // Configure table appearance
-        repoTable.setFillsViewportHeight(true);
         repoTable.setRowSelectionAllowed(false);
 
         rebuildRepoTable();
@@ -77,6 +78,7 @@ public class DebtSettingsConfigurable implements Configurable {
                 .addLabeledComponent("Username:", usernameField)
                 .addLabeledComponent("Repository", repoTableScroll)
                 .addLabeledComponent("Columns:", columnsPanel)
+                .addLabeledComponent("DatePattern:", datePatternField)
                 .getPanel();
     }
 
@@ -145,6 +147,7 @@ public class DebtSettingsConfigurable implements Configurable {
     @Override
     public boolean isModified() {
         boolean basic = !Objects.equals(usernameField.getText(), settings.getState().getUsername());
+        basic |= !Objects.equals(datePatternField.getText(), settings.getState().getDatePattern());
         if (basic) return true;
         Map<String, String> current = settings.getState().getRepoDebtPaths();
         if (current == null) current = new LinkedHashMap<>();
@@ -185,6 +188,8 @@ public class DebtSettingsConfigurable implements Configurable {
         // Persist column visibility
         Map<String, Boolean> uiCols = collectUiColumnVisibility();
         settings.getState().setColumnVisibility(new LinkedHashMap<>(uiCols));
+
+        settings.getState().setDatePattern(datePatternField.getText());
 
         // Notify listeners
         project.getMessageBus().syncPublisher(DebtSettings.TOPIC).settingsChanged(settings.getState());

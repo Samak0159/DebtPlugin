@@ -24,6 +24,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
 
     public static final Topic<DebtSettingsListener> TOPIC = Topic.create("Debt Settings Changed", DebtSettingsListener.class);
     public static final String DEFAULT_DEBT_FILE_PATH = "dev/debt.json";
+    private static String DEFAULT_DATE_PATTERN = "yyyy.MM.dd";
 
     public static final class State {
         public String username = "";
@@ -31,6 +32,8 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         public Map<String, String> repoDebtPaths = new HashMap<>();
         // Column visibility by column display name ("(Actions)" for empty header). true => visible, false => hidden
         public Map<String, Boolean> columnVisibility = new LinkedHashMap<>();
+
+        public String datePattern = DEFAULT_DATE_PATTERN;
 
         public State() {
         }
@@ -75,6 +78,14 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
                                 .toString();
                     });
         }
+
+        public String getDatePattern() {
+            return datePattern;
+        }
+
+        public void setDatePattern(final String datePattern) {
+            this.datePattern = datePattern;
+        }
     }
 
     private State myState = new State();
@@ -90,6 +101,9 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         if (myState.columnVisibility == null) {
             myState.columnVisibility = new LinkedHashMap<>();
         }
+        if (myState.datePattern == null) {
+            myState.datePattern = DEFAULT_DATE_PATTERN;
+        }
         return myState;
     }
 
@@ -101,6 +115,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         }
         if (myState.repoDebtPaths == null) myState.repoDebtPaths = new HashMap<>();
         if (myState.columnVisibility == null) myState.columnVisibility = new LinkedHashMap<>();
+        if (myState.datePattern == null) myState.datePattern = DEFAULT_DATE_PATTERN;
     }
 
     public String getOrInitUsername() {

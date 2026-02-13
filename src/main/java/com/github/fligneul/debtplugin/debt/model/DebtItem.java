@@ -2,6 +2,7 @@ package com.github.fligneul.debtplugin.debt.model;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -27,6 +28,8 @@ public class DebtItem {
     private final String currentModule;
     // Links to other debts keyed by target debt id with a list of relationships
     private final Map<String, Relationship> links;
+    private final long creationDate;
+    private final long updateDate;
 
     // No-args constructor for serializers (e.g., Gson)
     public DebtItem() {
@@ -47,6 +50,8 @@ public class DebtItem {
         this.currentModule = "";
         this.links = new LinkedHashMap<>();
         this.jira = "";
+        this.creationDate = Instant.now().getEpochSecond();
+        this.updateDate = Instant.now().getEpochSecond();
     }
 
     private DebtItem(final Builder builder) {
@@ -66,7 +71,9 @@ public class DebtItem {
         this.estimation = builder.estimation;
         this.currentModule = builder.currentModule;
         this.links = builder.links != null ? new LinkedHashMap<>(builder.links) : new LinkedHashMap<>();
-        this.jira = builder.jira == null || builder.jira.isBlank() ? "": builder.jira;
+        this.jira = builder.jira == null || builder.jira.isBlank() ? "" : builder.jira;
+        this.creationDate = builder.createDate;
+        this.updateDate = builder.updateDate;
     }
 
     public static Builder newBuilder() {
@@ -157,6 +164,14 @@ public class DebtItem {
         return jira;
     }
 
+    public long getCreationDate() {
+        return creationDate;
+    }
+
+    public long getUpdateDate() {
+        return updateDate;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -178,12 +193,14 @@ public class DebtItem {
                 && Objects.equals(comment, debtItem.comment)
                 && Objects.equals(currentModule, debtItem.currentModule)
                 && Objects.equals(links, debtItem.links)
-                && Objects.equals(jira, debtItem.jira);
+                && Objects.equals(jira, debtItem.jira)
+                && Objects.equals(creationDate, debtItem.creationDate)
+                && Objects.equals(updateDate, debtItem.updateDate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links, jira);
+        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links, jira, creationDate, updateDate);
     }
 
     @Override
@@ -206,6 +223,8 @@ public class DebtItem {
                 ", currentModule='" + currentModule + '\'' +
                 ", links=" + links +
                 ", jira=" + jira +
+                ", creationDate=" + creationDate +
+                ", updateDate=" + updateDate +
                 '}';
     }
 
@@ -227,8 +246,11 @@ public class DebtItem {
         private String currentModule;
         private Map<String, Relationship> links;
         private String jira;
+        private long createDate;
+        private long updateDate;
 
         public Builder() {
+            createDate = Instant.now().getEpochSecond();
         }
 
         public Builder(DebtItem item) {
@@ -249,90 +271,97 @@ public class DebtItem {
             this.currentModule = item.currentModule;
             this.links = item.links;
             this.jira = item.jira;
+            this.createDate = item.creationDate;
+            this.updateDate = item.updateDate;
         }
 
         public Builder withId(final String id) {
             this.id = id;
-            return this;
+            return builder();
         }
 
         public Builder withLinks(final Map<String, Relationship> links) {
             this.links = links;
-            return this;
+            return builder();
         }
 
         public Builder withFile(final String file) {
             this.file = file;
-            return this;
+            return builder();
         }
 
         public Builder withLine(final int line) {
             this.line = line;
-            return this;
+            return builder();
         }
 
         public Builder withTitle(final String title) {
             this.title = title;
-            return this;
+            return builder();
         }
 
         public Builder withDescription(final String description) {
             this.description = description;
-            return this;
+            return builder();
         }
 
         public Builder withUsername(final String username) {
             this.username = username;
-            return this;
+            return builder();
         }
 
         public Builder withWantedLevel(final int wantedLevel) {
             this.wantedLevel = wantedLevel;
-            return this;
+            return builder();
         }
 
         public Builder withComplexity(final Complexity complexity) {
             this.complexity = complexity;
-            return this;
+            return builder();
         }
 
         public Builder withStatus(final Status status) {
             this.status = status;
-            return this;
+            return builder();
         }
 
         public Builder withPriority(final String priority) {
             this.priority = priority;
-            return this;
+            return builder();
         }
 
         public Builder withRisk(final Risk risk) {
             this.risk = risk;
-            return this;
+            return builder();
         }
 
         public Builder withTargetVersion(final String targetVersion) {
             this.targetVersion = targetVersion;
-            return this;
+            return builder();
         }
 
         public Builder withComment(final String comment) {
             this.comment = comment;
-            return this;
+            return builder();
         }
 
         public Builder withEstimation(final int estimation) {
             this.estimation = estimation;
-            return this;
+            return builder();
         }
 
         public Builder withCurrentModule(final String currentModule) {
             this.currentModule = currentModule;
-            return this;
+            return builder();
         }
 
         public Builder withJira(final String jira) {
             this.jira = jira;
+            return builder();
+        }
+
+        private Builder builder() {
+            updateDate = Instant.now().getEpochSecond();
             return this;
         }
 
