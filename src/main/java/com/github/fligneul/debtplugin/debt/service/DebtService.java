@@ -88,46 +88,6 @@ public final class DebtService {
         }
     }
 
-    private void ensureJsonFileExist() {
-        if (debtsByRepository.isEmpty()) {
-            return;
-        }
-        final Map<String, String> jsonPathByRepositoryAbsolutePath = Optional.ofNullable(settings.getState())
-                .map(DebtSettings.State::getRepoDebtPaths)
-                .orElseGet(LinkedHashMap::new);
-
-        for (Repository repository : debtsByRepository.keySet()) {
-            String jsonPath = jsonPathByRepositoryAbsolutePath.get(repository.getRepositoryAbsolutePath());
-            String pathToShow;
-            if (jsonPath == null || jsonPath.isBlank()) {
-                // show only the default relative path
-                pathToShow = DebtSettings.DEFAULT_DEBT_FILE_PATH;
-            } else {
-                pathToShow = toRelativeIfPossible(repository.getRepositoryAbsolutePath(), jsonPath);
-            }
-
-            ensureFileExists(repository.getRepositoryAbsolutePath(), pathToShow);
-            repository.setJsonPath(pathToShow);
-        }
-    }
-
-    private static String toRelativeIfPossible(String repoRoot, String value) {
-        if (value == null) return "";
-        String v = value.trim();
-        if (v.isEmpty()) return "";
-        try {
-            Path root = Paths.get(repoRoot).toAbsolutePath().normalize();
-            Path p = Paths.get(v);
-            Path abs = p.isAbsolute() ? p.toAbsolutePath().normalize() : root.resolve(p).normalize();
-            if (abs.startsWith(root)) {
-                return root.relativize(abs).toString().replace('\\', '/');
-            }
-            return v.replace('\\', '/');
-        } catch (Exception e) {
-            return v.replace('\\', '/');
-        }
-    }
-
     public synchronized void add(@NotNull DebtItem debtItem, @NotNull final String repoRoot) {
         getDebtForRepositoryAbsolutePath(repoRoot)
                 .map(Map.Entry::getValue)
@@ -287,7 +247,6 @@ public final class DebtService {
             }
         }
 
-        ensureJsonFileExist();
     }
 
     private void saveDebts(String repoRoot) {
@@ -347,23 +306,6 @@ public final class DebtService {
             return file.isAbsolute() ? file : new File(repoRoot, overrideOrBlank);
         } catch (Exception e) {
             return new File(repoRoot, defaultRelPath);
-        }
-    }
-
-    private void ensureFileExists(String absolutePath, String relativePath) {
-        final File file = new File(absolutePath, relativePath);
-
-        File parent = file.getParentFile();
-        if (parent != null && !parent.exists()) {
-            parent.mkdirs();
-        }
-
-        if (!file.exists()) {
-            try {
-                Files.writeString(file.toPath(), "[]", StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                LOG.error("Error while creating %s".formatted(file.getAbsolutePath()));
-            }
         }
     }
 
