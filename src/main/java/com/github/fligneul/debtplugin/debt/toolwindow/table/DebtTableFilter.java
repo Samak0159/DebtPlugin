@@ -7,6 +7,7 @@ import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.toolwindow.MultiSelectFilter;
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.diagnostic.Logger;
 
 import javax.swing.BoxLayout;
@@ -102,6 +103,11 @@ public class DebtTableFilter extends JPanel {
         columnSelector.addSelectionListener(this::applyColumnSelection);
         rowPanel.add(columnSelector);
 
+        final JButton clearButton = new JButton();
+        clearButton.setIcon(AllIcons.Actions.DeleteTag);
+        clearButton.setToolTipText("Clear Filters");
+        clearButton.addActionListener(e -> clearFilters());
+
         toggleFiltersButton.setText(filtersCollapsed ? "+" : "-");
         toggleFiltersButton.addActionListener(e -> {
             filtersCollapsed = !filtersCollapsed;
@@ -111,7 +117,12 @@ public class DebtTableFilter extends JPanel {
             this.revalidate();
             this.repaint();
         });
-        rowPanel.add(toggleFiltersButton, BorderLayout.EAST);
+
+        final JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        rightPanel.add(clearButton);
+        rightPanel.add(toggleFiltersButton);
+
+        rowPanel.add(rightPanel, BorderLayout.EAST);
 
         return rowPanel;
     }
@@ -290,6 +301,24 @@ public class DebtTableFilter extends JPanel {
         } catch (Exception ex) {
             if (LOG.isDebugEnabled()) LOG.debug("applyColumnSelection failed: " + ex.getMessage(), ex);
         }
+    }
+
+    public void clearFilters() {
+        fileFilter.setText("");
+        lineFilter.setText("");
+        titleFilter.setText("");
+        descFilter.setText("");
+        userFilter.setText("");
+        wantedLevelFilter.clearSelection();
+        complexityFilter.clearSelection();
+        statusFilter.clearSelection();
+        priorityFilter.clearSelection();
+        riskFilter.clearSelection();
+        targetVersionFilter.setText("");
+        commentFilter.setText("");
+        estimationFilter.clearSelection();
+        moduleFilter.clearSelection();
+        jiraFilter.setText("");
     }
 
     public void setFileFilterValue(final String file) {

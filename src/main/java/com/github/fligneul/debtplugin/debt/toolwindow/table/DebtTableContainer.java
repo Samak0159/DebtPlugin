@@ -38,12 +38,9 @@ public class DebtTableContainer extends JPanel {
 
         project.getMessageBus().connect().subscribe(DebtService.SELECTION_TOPIC, new DebtServiceSelectionListener() {
             @Override
-            public void selectFile(String file) {
+            public void select(String file, final int line) {
+                filters.clearFilters();
                 filters.setFileFilterValue(table.getTableModel().displayedFile(file));
-            }
-
-            @Override
-            public void selectLine(final int line) {
                 filters.setLineFilter(String.valueOf(line));
             }
         });
