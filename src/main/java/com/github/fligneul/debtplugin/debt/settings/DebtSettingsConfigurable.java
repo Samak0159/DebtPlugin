@@ -1,11 +1,14 @@
 package com.github.fligneul.debtplugin.debt.settings;
 
+import com.github.fligneul.debtplugin.debt.model.Field;
 import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.project.Project;
+import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
+import com.intellij.ui.table.JBTable;
 import com.intellij.util.ui.FormBuilder;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
@@ -14,8 +17,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import java.awt.FlowLayout;
 import java.util.LinkedHashMap;
@@ -37,7 +38,7 @@ public class DebtSettingsConfigurable implements Configurable {
             return column == 1; // only path column editable
         }
     };
-    private final JTable repoTable = new JTable(repoTableModel);
+    private final JBTable repoTable = new JBTable(repoTableModel);
 
     // Keep track of repo root for each table row
     private final List<String> tableRepoRoots = new LinkedList<>();
@@ -45,6 +46,8 @@ public class DebtSettingsConfigurable implements Configurable {
     // Columns UI
     private final JPanel columnsPanel = new JPanel();
     private final Map<String, JCheckBox> columnChecks = new LinkedHashMap<>(); // name -> checkbox
+    private final JPanel creationPanel = new JPanel();
+    private final Map<String, JCheckBox> creationChecks = new LinkedHashMap<>(); // name -> checkbox
     private JBTextField datePatternField;
 
     public DebtSettingsConfigurable(Project project) {
@@ -72,12 +75,20 @@ public class DebtSettingsConfigurable implements Configurable {
         columnsPanel.setLayout(new BoxLayout(columnsPanel, BoxLayout.Y_AXIS));
         rebuildColumnsPanelFromService();
 
-        JScrollPane repoTableScroll = new JScrollPane(repoTable);
+        final JBScrollPane repoTableScroll = new JBScrollPane(repoTable);
+
+        creationPanel.setLayout(new BoxLayout(creationPanel, BoxLayout.Y_AXIS));
+        buildCreateFieldPanelFromService();
 
         return FormBuilder.createFormBuilder()
                 .addLabeledComponent("Username:", usernameField)
+                .addSeparator()
                 .addLabeledComponent("Repository", repoTableScroll)
+                .addSeparator()
                 .addLabeledComponent("Columns:", columnsPanel)
+                .addSeparator()
+                .addLabeledComponent("Creation fields:", creationPanel)
+                .addSeparator()
                 .addLabeledComponent("DatePattern:", datePatternField)
                 .getPanel();
     }
@@ -113,7 +124,7 @@ public class DebtSettingsConfigurable implements Configurable {
 
         JPanel currentRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         for (int i = 0; i < columnService.getColumns().size(); i++) {
-            if (i % 5 == 0) {
+            if (i % 7 == 0) {
                 currentRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
                 columnsPanel.add(currentRowPanel);
             }
@@ -127,6 +138,32 @@ public class DebtSettingsConfigurable implements Configurable {
 
         columnsPanel.revalidate();
         columnsPanel.repaint();
+    }
+
+    private void buildCreateFieldPanelFromService() {
+        creationPanel.removeAll();
+        creationChecks.clear();
+
+        JPanel currentRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        for (int i = 0; i < Field.values().length; i++) {
+            if (i % 7 == 0) {
+                currentRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+                creationPanel.add(currentRowPanel);
+            }
+
+            final Field field = Field.values()[i];
+
+            final String name = field.name();
+            final JCheckBox checkBox = new JCheckBox(name, computeInitialVisibleFor(name));
+            checkBox.setEnabled(!field.isMandatory());
+            checkBox.setSelected(settings.getState().getCreationVisibility().getOrDefault(name,field.isDefaultVisibilty()));
+
+            creationChecks.put(name, checkBox);
+            currentRowPanel.add(checkBox);
+        }
+
+        creationPanel.revalidate();
+        creationPanel.repaint();
     }
 
     private boolean computeInitialVisibleFor(String columnName) {
@@ -144,20 +181,31 @@ public class DebtSettingsConfigurable implements Configurable {
         return map;
     }
 
+    private Map<String, Boolean> collectCreationFieldsVisibility() {
+        Map<String, Boolean> map = new LinkedHashMap<>();
+        for (Map.Entry<String, JCheckBox> e : creationChecks.entrySet()) {
+            map.put(e.getKey(), e.getValue().isSelected());
+        }
+        return map;
+    }
+
     @Override
     public boolean isModified() {
         boolean basic = !Objects.equals(usernameField.getText(), settings.getState().getUsername());
         basic |= !Objects.equals(datePatternField.getText(), settings.getState().getDatePattern());
         if (basic) return true;
         Map<String, String> current = settings.getState().getRepoDebtPaths();
-        if (current == null) current = new LinkedHashMap<>();
         Map<String, String> ui = collectUiRepoPaths();
         if (!Objects.equals(ui, current)) return true;
 
-        Map<String, Boolean> currentCols = settings.getState().getColumnVisibility();
-        if (currentCols == null) currentCols = new LinkedHashMap<>();
+        Map<String, Boolean> columnsVisibilities = settings.getState().getColumnVisibility();
         Map<String, Boolean> uiCols = collectUiColumnVisibility();
-        return !Objects.equals(uiCols, currentCols);
+        if (!Objects.equals(uiCols, columnsVisibilities)) return true;
+
+        Map<String, Boolean> creationVisibilities = settings.getState().getCreationVisibility();
+        Map<String, Boolean> currentSelection = collectCreationFieldsVisibility();
+        return !Objects.equals(currentSelection, creationVisibilities);
+
     }
 
     @Override
@@ -191,6 +239,8 @@ public class DebtSettingsConfigurable implements Configurable {
 
         settings.getState().setDatePattern(datePatternField.getText());
 
+        settings.getState().setCreationVisibility(collectCreationFieldsVisibility());
+
         // Notify listeners
         project.getMessageBus().syncPublisher(DebtSettings.TOPIC).settingsChanged(settings.getState());
     }
@@ -203,6 +253,7 @@ public class DebtSettingsConfigurable implements Configurable {
         usernameField.setText(settings.getOrInitUsername());
         rebuildRepoTable();
         rebuildColumnsPanelFromService();
+        buildCreateFieldPanelFromService();
         // sync checkbox states from settings in case of differences
         Map<String, Boolean> vis = settings.getState().getColumnVisibility();
         if (vis == null) vis = new LinkedHashMap<>();

@@ -1,5 +1,6 @@
 package com.github.fligneul.debtplugin.debt.settings;
 
+import com.github.fligneul.debtplugin.debt.model.Field;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.State;
@@ -24,7 +25,16 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
 
     public static final Topic<DebtSettingsListener> TOPIC = Topic.create("Debt Settings Changed", DebtSettingsListener.class);
     public static final String DEFAULT_DEBT_FILE_PATH = "dev/debt.json";
-    private static String DEFAULT_DATE_PATTERN = "yyyy.MM.dd";
+    private static final String DEFAULT_DATE_PATTERN = "yyyy.MM.dd";
+
+    private static LinkedHashMap<String, Boolean> initCreationVisibility() {
+        final LinkedHashMap<String, Boolean> map = new LinkedHashMap<>();
+        for (final Field field : Field.values()) {
+            map.put(field.name(), field.isDefaultVisibilty());
+        }
+
+        return map;
+    }
 
     public static final class State {
         public String username = "";
@@ -34,6 +44,8 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         public Map<String, Boolean> columnVisibility = new LinkedHashMap<>();
 
         public String datePattern = DEFAULT_DATE_PATTERN;
+        // Field to display on the creation dialogPane
+        public Map<String, Boolean> creationVisibility = new LinkedHashMap<>(initCreationVisibility());
 
         public State() {
         }
@@ -60,6 +72,14 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
 
         public void setColumnVisibility(Map<String, Boolean> columnVisibility) {
             this.columnVisibility = columnVisibility;
+        }
+
+        public @NotNull Map<String, Boolean> getCreationVisibility() {
+            return creationVisibility;
+        }
+
+        public void setCreationVisibility(final Map<String, Boolean> creationVisibility) {
+            this.creationVisibility = creationVisibility;
         }
 
         public String getDebtFilePath(Project project) {
@@ -104,6 +124,9 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         if (myState.datePattern == null) {
             myState.datePattern = DEFAULT_DATE_PATTERN;
         }
+        if (myState.creationVisibility == null) {
+            myState.creationVisibility = initCreationVisibility();
+        }
         return myState;
     }
 
@@ -116,6 +139,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         if (myState.repoDebtPaths == null) myState.repoDebtPaths = new HashMap<>();
         if (myState.columnVisibility == null) myState.columnVisibility = new LinkedHashMap<>();
         if (myState.datePattern == null) myState.datePattern = DEFAULT_DATE_PATTERN;
+        if (myState.creationVisibility == null) myState.creationVisibility = initCreationVisibility();
     }
 
     public String getOrInitUsername() {

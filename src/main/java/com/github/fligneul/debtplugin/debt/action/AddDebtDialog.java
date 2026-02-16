@@ -3,6 +3,7 @@ package com.github.fligneul.debtplugin.debt.action;
 import com.github.fligneul.debtplugin.debt.action.links.LinksComponent;
 import com.github.fligneul.debtplugin.debt.model.Complexity;
 import com.github.fligneul.debtplugin.debt.model.DebtItem;
+import com.github.fligneul.debtplugin.debt.model.Field;
 import com.github.fligneul.debtplugin.debt.model.Relationship;
 import com.github.fligneul.debtplugin.debt.model.Repository;
 import com.github.fligneul.debtplugin.debt.model.Risk;
@@ -10,6 +11,7 @@ import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
+import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.toolkit.SwingComponentHelper;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
@@ -40,6 +42,8 @@ import java.util.UUID;
 public class AddDebtDialog extends DialogWrapper {
     private final Project project;
     private final DebtProviderService debtProviderService;
+    private final DebtSettings debtSettings;
+
     private final TextFieldWithBrowseButton fileField = new TextFieldWithBrowseButton();
     private final JSpinner lineSpinner = new JSpinner(new SpinnerNumberModel(1, 1, Integer.MAX_VALUE, 1));
     private final JBTextField titleField = new JBTextField();
@@ -85,6 +89,7 @@ public class AddDebtDialog extends DialogWrapper {
         this.project = project;
         this.debtProviderService = project.getService(DebtProviderService.class);
         this.debtService = project.getService(DebtService.class);
+        this.debtSettings = project.getService(DebtSettings.class);
         setTitle("Add New Debt");
         setResizable(true);
         this.id = UUID.randomUUID().toString();
@@ -109,6 +114,7 @@ public class AddDebtDialog extends DialogWrapper {
         this.project = project;
         this.debtProviderService = project.getService(DebtProviderService.class);
         this.debtService = project.getService(DebtService.class);
+        this.debtSettings = project.getService(DebtSettings.class);
         setTitle("Edit Debt");
         setResizable(true);
         this.isEdit = true;
@@ -222,27 +228,36 @@ public class AddDebtDialog extends DialogWrapper {
         });
 
         final JPanel fileRow = SwingComponentHelper.labeled("File:", fileField);
-        fileRow.setVisible(isEdit);
+        fileRow.setVisible(isEdit || getVisibility(Field.FILE));
         panel.add(fileRow);
 
         // Line number
         final JPanel lineRow = SwingComponentHelper.labeled("Line:", lineSpinner);
-        lineRow.setVisible(isEdit);
+        lineRow.setVisible(isEdit || getVisibility(Field.LINE));
         panel.add(lineRow);
 
-        panel.add(SwingComponentHelper.labeled("Title:", titleField));
+        final JPanel titleRow = SwingComponentHelper.labeled("Title:", titleField);
+        titleRow.setVisible(getVisibility(Field.TITLE));
+        panel.add(titleRow);
 
         JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
-        panel.add(SwingComponentHelper.labeled("Description:", descriptionScroll));
+        final JPanel descriptionRow = SwingComponentHelper.labeled("Description:", descriptionScroll);
+        descriptionRow.setVisible(getVisibility(Field.DESCRIPTION));
+        panel.add(descriptionRow);
 
-        panel.add(SwingComponentHelper.labeled("Wanted Level (1-5):", wantedLevelSpinner));
-        panel.add(SwingComponentHelper.labeled("Complexity:", complexityComboBox));
+        final JPanel wantedRow = SwingComponentHelper.labeled("Wanted Level (1-5):", wantedLevelSpinner);
+        wantedRow.setVisible(getVisibility(Field.WANTEDLEVEL));
+        panel.add(wantedRow);
+
+        final JPanel complexityRow = SwingComponentHelper.labeled("Complexity:", complexityComboBox);
+        complexityRow.setVisible(getVisibility(Field.COMPLEXITY));
+        panel.add(complexityRow);
 
         // Row panels to allow toggling visibility
         final JPanel statusRow = SwingComponentHelper.labeled("Status:", statusComboBox);
-        statusRow.setVisible(isEdit);
+        statusRow.setVisible(isEdit || getVisibility(Field.STATUS));
         panel.add(statusRow);
 
         final JPanel priorityRow = SwingComponentHelper.labeled("Priority:", priorityComboBox);
@@ -258,11 +273,11 @@ public class AddDebtDialog extends DialogWrapper {
             }
         });
         debtService.getDistinctPriorities(debtProviderService.currentItems(), priorityComboBox::addItem);
-        priorityRow.setVisible(isEdit);
+        priorityRow.setVisible(isEdit || getVisibility(Field.PRIORITY));
         panel.add(priorityRow);
 
         final JPanel riskRow = SwingComponentHelper.labeled("Risk:", riskComboBox);
-        riskRow.setVisible(isEdit);
+        riskRow.setVisible(isEdit || getVisibility(Field.RISK));
         panel.add(riskRow);
 
         final JPanel typeRow = SwingComponentHelper.labeled("Type:", typeComboBox);
@@ -278,35 +293,41 @@ public class AddDebtDialog extends DialogWrapper {
             }
         });
         debtService.getDistinctType(debtProviderService.currentItems(), typeComboBox::addItem);
-        typeRow.setVisible(isEdit);
+        typeRow.setVisible(isEdit || getVisibility(Field.TYPE));
         panel.add(typeRow);
 
         final JPanel targetVersionRow = SwingComponentHelper.labeled("Target Version:", targetVersionField);
-        targetVersionRow.setVisible(isEdit);
+        targetVersionRow.setVisible(isEdit || getVisibility(Field.TARGET_VERSION));
         panel.add(targetVersionRow);
 
         JScrollPane commentScroll = new JScrollPane(commentArea);
         commentArea.setLineWrap(true);
         commentArea.setWrapStyleWord(true);
         final JPanel commentRow = SwingComponentHelper.labeled("Comment:", commentScroll);
-        commentRow.setVisible(isEdit);
+        commentRow.setVisible(isEdit || getVisibility(Field.COMMENT));
         panel.add(commentRow);
         panel.add(Box.createVerticalStrut(4));
 
         // Estimation
-        panel.add(SwingComponentHelper.labeled("Estimation:", estimationSpinner));
+        final JPanel estimationRow = SwingComponentHelper.labeled("Estimation:", estimationSpinner);
+        estimationRow.setVisible(getVisibility(Field.ESTIMATION));
+        panel.add(estimationRow);
         panel.add(Box.createVerticalStrut(4));
 
         final JPanel jiraPanel = SwingComponentHelper.labeled("Jira:", jiraField);
-        jiraPanel.setVisible(isEdit);
+        jiraPanel.setVisible(isEdit || getVisibility(Field.JIRA));
         panel.add(jiraPanel);
 
         linksComponent = new LinksComponent(debtService, debtProviderService, links, id);
         JPanel linksPanel = linksComponent.getPane();
-        linksPanel.setVisible(isEdit);
+        linksPanel.setVisible(isEdit || getVisibility(Field.LINKS));
         panel.add(linksPanel);
 
         return new JBScrollPane(panel);
+    }
+
+    private Boolean getVisibility(final Field field) {
+        return debtSettings.getState().getCreationVisibility().getOrDefault(field.name(), false);
     }
 
     @Override
