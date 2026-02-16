@@ -54,6 +54,7 @@ public class AddDebtDialog extends DialogWrapper {
     private final JSpinner estimationSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
     private final JComboBox<Repository> repositoryComboBox = new JComboBox<>();
     private final JBTextField jiraField = new JBTextField();
+    private final JComboBox<String> typeComboBox = new JComboBox<>();
     private final DebtService debtService;
 
     // Whether the dialog is used to edit an existing item (true) or add a new one (false)
@@ -75,6 +76,7 @@ public class AddDebtDialog extends DialogWrapper {
     private Map<String, Relationship> links;
     private String jira = "";
     private Repository selectedRepository;
+    private String type;
 
     private LinksComponent linksComponent;
 
@@ -126,6 +128,7 @@ public class AddDebtDialog extends DialogWrapper {
         this.estimation = item.getEstimation();
         this.links = item.getLinks();
         this.jira = item.getJira();
+        this.type = item.getType();
         init();
         // After components are created in init(), push values into UI controls
         fileField.setText(item.getFile());
@@ -141,6 +144,7 @@ public class AddDebtDialog extends DialogWrapper {
         targetVersionField.setText(item.getTargetVersion());
         estimationSpinner.setValue(item.getEstimation());
         jiraField.setText(item.getJira());
+        typeComboBox.setSelectedItem(item.getType());
     }
 
     @Override
@@ -236,7 +240,6 @@ public class AddDebtDialog extends DialogWrapper {
         panel.add(SwingComponentHelper.labeled("Wanted Level (1-5):", wantedLevelSpinner));
         panel.add(SwingComponentHelper.labeled("Complexity:", complexityComboBox));
 
-
         // Row panels to allow toggling visibility
         final JPanel statusRow = SwingComponentHelper.labeled("Status:", statusComboBox);
         statusRow.setVisible(isEdit);
@@ -261,6 +264,22 @@ public class AddDebtDialog extends DialogWrapper {
         final JPanel riskRow = SwingComponentHelper.labeled("Risk:", riskComboBox);
         riskRow.setVisible(isEdit);
         panel.add(riskRow);
+
+        final JPanel typeRow = SwingComponentHelper.labeled("Type:", typeComboBox);
+        typeComboBox.setEditable(true);
+        typeComboBox.setRenderer(new ListCellRenderer<String>() {
+            @Override
+            public Component getListCellRendererComponent(final JList<? extends String> list, final String value, final int index, final boolean isSelected, final boolean cellHasFocus) {
+                if (index == 0) {
+                    return new JTextField(value);
+                } else {
+                    return new JLabel(value);
+                }
+            }
+        });
+        debtService.getDistinctType(debtProviderService.currentItems(), typeComboBox::addItem);
+        typeRow.setVisible(isEdit);
+        panel.add(typeRow);
 
         final JPanel targetVersionRow = SwingComponentHelper.labeled("Target Version:", targetVersionField);
         targetVersionRow.setVisible(isEdit);
@@ -312,6 +331,7 @@ public class AddDebtDialog extends DialogWrapper {
                 : linksComponent.getLinks();
         this.selectedRepository = (Repository) repositoryComboBox.getSelectedItem();
         this.jira = jiraField.getText();
+        this.type = (String) typeComboBox.getSelectedItem();
 
         super.doOKAction();
     }
@@ -378,5 +398,9 @@ public class AddDebtDialog extends DialogWrapper {
 
     public String getJira() {
         return jira;
+    }
+
+    public String getType() {
+        return type;
     }
 }

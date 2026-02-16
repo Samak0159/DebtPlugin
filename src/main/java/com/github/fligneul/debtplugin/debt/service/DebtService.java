@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Service(Service.Level.PROJECT)
 public final class DebtService {
@@ -481,9 +482,18 @@ public final class DebtService {
         debtItems
                 .stream()
                 .map(DebtItem::getPriority)
-                .sorted()
-                .distinct()
+                .map(String::trim)
+                .collect(Collectors.toSet())
                 .forEach(priorityConsumer);
+    }
+
+    public void getDistinctType(final List<DebtItem> debtItems, final Consumer<String> typeConsumer) {
+        debtItems
+                .stream()
+                .map(DebtItem::getType)
+                .map(String::trim)
+                .collect(Collectors.toSet())
+                .forEach(typeConsumer);
     }
 
     //TODO Should be private. split this sevice with WriterService
@@ -513,6 +523,7 @@ public final class DebtService {
             String comment = getAsString(obj, "comment", "");
             int estimation = getAsInt(obj, "estimation", 0);
             String jira = getAsString(obj, "jira", "");
+            String type = getAsString(obj, "type", "");
 
             // Optional, backward-compatible: prefer currentModule, fallback to legacy moduleParent
             String currentModule = getAsString(obj, "currentModule", null);
@@ -572,7 +583,8 @@ public final class DebtService {
                     .withEstimation(estimation)
                     .withCurrentModule(currentModule)
                     .withLinks(links)
-                    .withJira(jira);
+                    .withJira(jira)
+                    .withType(type);
             if (id != null && !id.isBlank()) {
                 builder.withId(id);
             }

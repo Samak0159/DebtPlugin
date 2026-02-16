@@ -28,6 +28,7 @@ public class DebtItem {
     private final String currentModule;
     // Links to other debts keyed by target debt id with a list of relationships
     private final Map<String, Relationship> links;
+    private final String type;
     private final long creationDate;
     private final long updateDate;
 
@@ -50,6 +51,7 @@ public class DebtItem {
         this.currentModule = "";
         this.links = new LinkedHashMap<>();
         this.jira = "";
+        this.type = "";
         this.creationDate = Instant.now().getEpochSecond();
         this.updateDate = Instant.now().getEpochSecond();
     }
@@ -72,6 +74,7 @@ public class DebtItem {
         this.currentModule = builder.currentModule;
         this.links = builder.links != null ? new LinkedHashMap<>(builder.links) : new LinkedHashMap<>();
         this.jira = builder.jira == null || builder.jira.isBlank() ? "" : builder.jira;
+        this.type = builder.type;
         this.creationDate = builder.createDate;
         this.updateDate = builder.updateDate;
     }
@@ -164,6 +167,10 @@ public class DebtItem {
         return jira;
     }
 
+    public String getType() {
+        return type;
+    }
+
     public long getCreationDate() {
         return creationDate;
     }
@@ -194,13 +201,14 @@ public class DebtItem {
                 && Objects.equals(currentModule, debtItem.currentModule)
                 && Objects.equals(links, debtItem.links)
                 && Objects.equals(jira, debtItem.jira)
+                && Objects.equals(type, debtItem.type)
                 && Objects.equals(creationDate, debtItem.creationDate)
                 && Objects.equals(updateDate, debtItem.updateDate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links, jira, creationDate, updateDate);
+        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links, jira, type, creationDate, updateDate);
     }
 
     @Override
@@ -223,6 +231,7 @@ public class DebtItem {
                 ", currentModule='" + currentModule + '\'' +
                 ", links=" + links +
                 ", jira=" + jira +
+                ", type=" + type +
                 ", creationDate=" + creationDate +
                 ", updateDate=" + updateDate +
                 '}';
@@ -246,6 +255,7 @@ public class DebtItem {
         private String currentModule;
         private Map<String, Relationship> links;
         private String jira;
+        private String type;
         private long createDate;
         private long updateDate;
 
@@ -271,6 +281,7 @@ public class DebtItem {
             this.currentModule = item.currentModule;
             this.links = item.links;
             this.jira = item.jira;
+            this.type = item.type;
             this.createDate = item.creationDate;
             this.updateDate = item.updateDate;
         }
@@ -357,6 +368,11 @@ public class DebtItem {
 
         public Builder withJira(final String jira) {
             this.jira = jira;
+            return builder();
+        }
+
+        public Builder withType(final String type) {
+            this.type = type;
             return builder();
         }
 

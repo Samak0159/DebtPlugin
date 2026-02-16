@@ -78,9 +78,10 @@ public final class ColumnService {
                 "Estimation",   // 13
                 "Jira",         // 14
                 "Module",       // 15
-                "CreationDate", // 16
-                "UpdateDate",   // 17
-                ""              // 18 actions (empty header)
+                "Type",         // 16
+                "CreationDate", // 17
+                "UpdateDate",   // 18
+                ""              // 19 actions (empty header)
         };
 
         for (int i = 0; i < names.length; i++) {

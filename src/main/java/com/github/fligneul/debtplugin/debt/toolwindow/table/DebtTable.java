@@ -53,6 +53,7 @@ public class DebtTable extends JBTable {
     private final DebtTableModel tableModel;
     private final int defaultRowHeight;
     private final JComboBox<String> priorityComboBox = new JComboBox<>();
+    private final JComboBox<String> typeComboBox = new JComboBox<>();
 
     public DebtTable(final Project project,
                      final DebtService debtService,
@@ -113,11 +114,12 @@ public class DebtTable extends JBTable {
                 }
             }
         };
-        this.getColumnModel().getColumn(16).setCellRenderer(cellRenderer);
+        this.getColumnModel().getColumn(16).setCellEditor(new DefaultCellEditor(typeComboBox));
         this.getColumnModel().getColumn(17).setCellRenderer(cellRenderer);
+        this.getColumnModel().getColumn(18).setCellRenderer(cellRenderer);
 
         // Action buttons (Edit + Delete) column is at index 18
-        final TableColumn actionCol = this.getColumnModel().getColumn(18);
+        final TableColumn actionCol = this.getColumnModel().getColumn(19);
         final ActionButtonsCell actionButtons = new ActionButtonsCell(editAction(), deleteAction());
         actionCol.setCellRenderer(actionButtons);
         actionCol.setCellEditor(actionButtons);
@@ -151,6 +153,7 @@ public class DebtTable extends JBTable {
                             .withCurrentModule(DebtService.resolveCurrentModule(dialog.getFilePath(), project.getBasePath()))
                             .withLinks(dialog.getLinks())
                             .withJira(dialog.getJira())
+                            .withType(dialog.getType())
                             .build();
 
                     LOG.info("Edit confirmed: file=" + newItem.getFile() + ":" + newItem.getLine() +
@@ -186,7 +189,10 @@ public class DebtTable extends JBTable {
     public void updateTable() {
         priorityComboBox.removeAllItems();
 
+        priorityComboBox.removeAllItems();
         debtService.getDistinctPriorities(debtProviderService.currentItems(), priorityComboBox::addItem);
+        typeComboBox.removeAllItems();
+        debtService.getDistinctType(debtProviderService.currentItems(), typeComboBox::addItem);
 
         applyColumnVisibilityFromSettings();
 

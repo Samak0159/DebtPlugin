@@ -27,8 +27,8 @@ public class DebtTableModel extends DefaultTableModel {
     public boolean isCellEditable(int row, int column) {
         return column >= 3
                 && column != 5
-                && column != 16
-                && column != 17;
+                && column != 17
+                && column != 18;
     }
 
     @Override
@@ -37,11 +37,11 @@ public class DebtTableModel extends DefaultTableModel {
             case 6 -> Integer.class;        // WantedLevel column
             case 7 -> Complexity.class;     // Complexity column
             case 8 -> Status.class;         // Status column
-            case 10 -> Risk.class;           // Risk column
+            case 10 -> Risk.class;          // Risk column
             case 13 -> Integer.class;       // Estimation column
-            case 16 -> Integer.class;       // CreationDate column
-            case 17 -> Integer.class;       // UpdateDate column
-            case 18 -> Object.class;        // Action column (for button)
+            case 17 -> Integer.class;       // CreationDate column
+            case 18 -> Integer.class;       // UpdateDate column
+            case 19 -> Object.class;        // Action column (for button)
             default -> super.getColumnClass(columnIndex);
         };
     }
@@ -121,6 +121,9 @@ public class DebtTableModel extends DefaultTableModel {
             case 14 -> oldDebtItem.toBuilder()
                     .withJira((String) aValue)
                     .build();
+            case 16 -> oldDebtItem.toBuilder()
+                    .withType((String) aValue)
+                    .build();
             default -> oldDebtItem;
         };
 
@@ -150,6 +153,7 @@ public class DebtTableModel extends DefaultTableModel {
                 debtItem.getEstimation(),
                 debtItem.getJira(),
                 debtItem.getCurrentModule(),
+                debtItem.getType(),
                 debtItem.getCreationDate(),
                 debtItem.getUpdateDate(),
                 null
