@@ -58,25 +58,51 @@ public class DebtItem {
 
     private DebtItem(final Builder builder) {
         this.id = builder.id != null && !builder.id.isBlank() ? builder.id : UUID.randomUUID().toString();
-        this.file = Objects.requireNonNull(builder.file, "file");
+        this.file = getOrDefault(builder.file, "");
         this.line = builder.line;
-        this.title = Objects.requireNonNull(builder.title, "title");
-        this.description = Objects.requireNonNull(builder.description, "description");
-        this.username = Objects.requireNonNull(builder.username, "username");
+        this.title = getOrDefault(builder.title, "");
+        this.description = getOrDefault(builder.description, "");
+        this.username = getOrDefault(builder.username, "");
         this.wantedLevel = builder.wantedLevel;
-        this.complexity = Objects.requireNonNull(builder.complexity, "complexity");
-        this.status = Objects.requireNonNull(builder.status, "status");
-        this.priority = Objects.requireNonNull(builder.priority, "priority");
-        this.risk = Objects.requireNonNull(builder.risk, "risk");
-        this.targetVersion = Objects.requireNonNull(builder.targetVersion, "targetVersion");
-        this.comment = Objects.requireNonNull(builder.comment, "comment");
+        this.complexity = getOrDefault(builder.complexity, Complexity.Easy);
+        this.status = getOrDefault(builder.status, Status.Submitted);
+        this.priority = getOrDefault(builder.priority, "");
+        this.risk = getOrDefault(builder.risk, Risk.None);
+        this.targetVersion = getOrDefault(builder.targetVersion, "");
+        this.comment = getOrDefault(builder.comment, "");
         this.estimation = builder.estimation;
-        this.currentModule = builder.currentModule;
-        this.links = builder.links != null ? new LinkedHashMap<>(builder.links) : new LinkedHashMap<>();
-        this.jira = builder.jira == null || builder.jira.isBlank() ? "" : builder.jira;
-        this.type = builder.type;
+        this.currentModule = getOrDefault(builder.currentModule, "");
+        this.links = builder.links == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(builder.links);
+        this.jira = getOrDefault(builder.jira, "");
+        this.type = getOrDefault(builder.type, "");
         this.creationDate = builder.createDate;
         this.updateDate = builder.updateDate;
+    }
+
+    private String getOrDefault(String value, String defaultValue) {
+        return value == null
+                ? defaultValue
+                : value;
+    }
+
+    private Complexity getOrDefault(Complexity value, Complexity defaultValue) {
+        return value == null
+                ? defaultValue
+                : value;
+    }
+
+    private Status getOrDefault(Status value, Status defaultValue){
+        return value == null
+                ? defaultValue
+                : value;
+    }
+
+    private Risk getOrDefault(Risk value, Risk defaultValue){
+        return value == null
+                ? defaultValue
+                : value;
     }
 
     public static Builder newBuilder() {
