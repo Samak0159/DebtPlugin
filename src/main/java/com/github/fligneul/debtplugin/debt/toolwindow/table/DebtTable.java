@@ -11,12 +11,16 @@ import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.editor.colors.EditorColorsListener;
+import com.intellij.openapi.editor.colors.EditorColorsManager;
+import com.intellij.openapi.editor.colors.EditorColorsScheme;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.table.JBTable;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.DefaultCellEditor;
 import javax.swing.JComboBox;
@@ -27,8 +31,10 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableColumnModelListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
@@ -40,6 +46,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
@@ -73,6 +80,8 @@ public class DebtTable extends JBTable {
         // Re-apply wrapping and adjust heights when columns change (width/visibility/move)
         this.getColumnModel().addColumnModelListener(new DebtColumnModelListener(this));
 
+        initBackgroundColor(project);
+
         initColumns();
 
         // Capture original TableColumn instances for show/hide later
@@ -88,6 +97,45 @@ public class DebtTable extends JBTable {
         applyColumnVisibilityFromSettings();
 
         this.addMouseListener(new DebtMouseAdapter(project, this, debtService, tableModel));
+    }
+
+    private void initBackgroundColor(final Project project) {
+        final AtomicReference<Color> baseColorAtomic = new AtomicReference<>(this.getBackground());
+
+        project.getMessageBus().connect().subscribe(EditorColorsManager.TOPIC, new EditorColorsListener() {
+            @Override
+            public void globalSchemeChange(@Nullable final EditorColorsScheme editorColorsScheme) {
+                if (editorColorsScheme == null) {
+                    baseColorAtomic.set(DebtTable.this.getBackground());
+                } else {
+                    baseColorAtomic.set(editorColorsScheme.getDefaultBackground());
+                }
+
+                DebtTable.this.repaint();
+            }
+        });
+
+        this.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                final Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                if (EditorColorsManager.getInstance().isDarkEditor()) {
+                    if (row % 2 == 0) {
+                        component.setBackground(baseColorAtomic.get());
+                    } else {
+                        component.setBackground(baseColorAtomic.get().brighter());
+                    }
+                } else {
+                    if (row % 2 == 0) {
+                        component.setBackground(baseColorAtomic.get());
+                    } else {
+                        component.setBackground(baseColorAtomic.get().darker());
+                    }
+                }
+                return component;
+            }
+        });
     }
 
     private void initColumns() {
