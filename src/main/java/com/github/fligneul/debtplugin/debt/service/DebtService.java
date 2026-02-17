@@ -183,6 +183,7 @@ public final class DebtService {
 
         saveDebts();
 
+        refresh();
         refreshHighlighting();
     }
 

@@ -35,7 +35,7 @@ public class DebtToolWindow extends JPanel {
                 LOG.info("Settings changed: username=" + settings.getUsername() + " relDebtPath=" + settings.getDebtFilePath(project));
                 // Apply column visibility from settings
                 // Refresh data
-                update();
+                update(true);
             }
         });
 
@@ -43,7 +43,7 @@ public class DebtToolWindow extends JPanel {
             @Override
             public void refresh() {
                 if (LOG.isDebugEnabled()) LOG.debug("Refresh requested from toolwindow");
-                update();
+                update(false);
             }
         });
     }
@@ -65,11 +65,11 @@ public class DebtToolWindow extends JPanel {
         this.setLayout(new BorderLayout());
         this.add(tabs, BorderLayout.CENTER);
 
-        update();
+        update(true);
     }
 
-    private void update() {
-        debtTableContainer.updateTable();
+    private void update(boolean refreshColumnVisiblity) {
+        debtTableContainer.updateTable(refreshColumnVisiblity);
         debtChartContainer.updateChart();
         relationshipGraphPanel.update();
     }

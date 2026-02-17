@@ -187,6 +187,10 @@ public class DebtTable extends JBTable {
     }
 
     public void updateTable() {
+        updateTable(false);
+    }
+
+    public void updateTable(boolean refreshColumnVisibilty) {
         priorityComboBox.removeAllItems();
 
         priorityComboBox.removeAllItems();
@@ -194,7 +198,9 @@ public class DebtTable extends JBTable {
         typeComboBox.removeAllItems();
         debtService.getDistinctType(debtProviderService.currentItems(), typeComboBox::addItem);
 
-        applyColumnVisibilityFromSettings();
+        if (refreshColumnVisibilty) {
+            applyColumnVisibilityFromSettings();
+        }
 
         // Ensure row heights match wrapped content after data refresh
         adjustAllRowsHeight();
