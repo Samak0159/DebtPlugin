@@ -48,12 +48,16 @@ public class DebtSettingsConfigurable implements Configurable {
     private final Map<String, JCheckBox> columnChecks = new LinkedHashMap<>(); // name -> checkbox
     private final JPanel creationPanel = new JPanel();
     private final Map<String, JCheckBox> creationChecks = new LinkedHashMap<>(); // name -> checkbox
-    private JBTextField datePatternField;
+    private final JBTextField datePatternField;
+    private final JBTextField maxCharField;
 
     public DebtSettingsConfigurable(Project project) {
         this.project = project;
         this.settings = project.getService(DebtSettings.class);
         this.columnService = project.getService(ColumnService.class);
+
+        datePatternField = new JBTextField(settings.getState().getDatePattern());
+        maxCharField = new JBTextField(String.valueOf(settings.getState().getMaxCharTextArea()));
     }
 
     @Override
@@ -64,7 +68,6 @@ public class DebtSettingsConfigurable implements Configurable {
     @Override
     public @Nullable JComponent createComponent() {
         usernameField.setText(settings.getOrInitUsername());
-        datePatternField = new JBTextField(settings.getState().getDatePattern());
 
         // Configure table appearance
         repoTable.setRowSelectionAllowed(false);
@@ -90,6 +93,7 @@ public class DebtSettingsConfigurable implements Configurable {
                 .addLabeledComponent("Creation fields:", creationPanel)
                 .addSeparator()
                 .addLabeledComponent("DatePattern:", datePatternField)
+                .addLabeledComponent("Max char table's textArea :", maxCharField)
                 .getPanel();
     }
 
@@ -156,7 +160,7 @@ public class DebtSettingsConfigurable implements Configurable {
             final String name = field.name();
             final JCheckBox checkBox = new JCheckBox(name, computeInitialVisibleFor(name));
             checkBox.setEnabled(!field.isMandatory());
-            checkBox.setSelected(settings.getState().getCreationVisibility().getOrDefault(name,field.isDefaultVisibilty()));
+            checkBox.setSelected(settings.getState().getCreationVisibility().getOrDefault(name, field.isDefaultVisibilty()));
 
             creationChecks.put(name, checkBox);
             currentRowPanel.add(checkBox);
@@ -193,6 +197,9 @@ public class DebtSettingsConfigurable implements Configurable {
     public boolean isModified() {
         boolean basic = !Objects.equals(usernameField.getText(), settings.getState().getUsername());
         basic |= !Objects.equals(datePatternField.getText(), settings.getState().getDatePattern());
+        if (!maxCharField.getText().isEmpty()) {
+            basic |= !Objects.equals(Integer.parseInt(maxCharField.getText()), settings.getState().getMaxCharTextArea());
+        }
         if (basic) return true;
         Map<String, String> current = settings.getState().getRepoDebtPaths();
         Map<String, String> ui = collectUiRepoPaths();
@@ -240,6 +247,13 @@ public class DebtSettingsConfigurable implements Configurable {
         settings.getState().setDatePattern(datePatternField.getText());
 
         settings.getState().setCreationVisibility(collectCreationFieldsVisibility());
+
+        if (maxCharField.getText().isEmpty()) {
+            maxCharField.setText(String.valueOf(DebtSettings.DEFAULT_MAX_CHAR_TEXT_AREA));
+            settings.getState().setMaxCharTextArea(DebtSettings.DEFAULT_MAX_CHAR_TEXT_AREA);
+        } else {
+            settings.getState().setMaxCharTextArea(Integer.parseInt(maxCharField.getText()));
+        }
 
         // Notify listeners
         project.getMessageBus().syncPublisher(DebtSettings.TOPIC).settingsChanged(settings.getState());

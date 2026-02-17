@@ -25,6 +25,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
 
     public static final Topic<DebtSettingsListener> TOPIC = Topic.create("Debt Settings Changed", DebtSettingsListener.class);
     public static final String DEFAULT_DEBT_FILE_PATH = "dev/debt.json";
+    public static final int DEFAULT_MAX_CHAR_TEXT_AREA = Integer.MAX_VALUE;
     private static final String DEFAULT_DATE_PATTERN = "yyyy.MM.dd";
 
     private static LinkedHashMap<String, Boolean> initCreationVisibility() {
@@ -46,6 +47,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         public String datePattern = DEFAULT_DATE_PATTERN;
         // Field to display on the creation dialogPane
         public Map<String, Boolean> creationVisibility = new LinkedHashMap<>(initCreationVisibility());
+        public Integer maxCharTextArea = DEFAULT_MAX_CHAR_TEXT_AREA;
 
         public State() {
         }
@@ -106,6 +108,14 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         public void setDatePattern(final String datePattern) {
             this.datePattern = datePattern;
         }
+
+        public void setMaxCharTextArea(int maxCharTextArea) {
+            this.maxCharTextArea = maxCharTextArea;
+        }
+
+        public int getMaxCharTextArea() {
+            return this.maxCharTextArea;
+        }
     }
 
     private State myState = new State();
@@ -127,6 +137,9 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         if (myState.creationVisibility == null) {
             myState.creationVisibility = initCreationVisibility();
         }
+        if (myState.maxCharTextArea == null) {
+            myState.maxCharTextArea = DEFAULT_MAX_CHAR_TEXT_AREA;
+        }
         return myState;
     }
 
@@ -140,6 +153,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
         if (myState.columnVisibility == null) myState.columnVisibility = new LinkedHashMap<>();
         if (myState.datePattern == null) myState.datePattern = DEFAULT_DATE_PATTERN;
         if (myState.creationVisibility == null) myState.creationVisibility = initCreationVisibility();
+        if (myState.maxCharTextArea == null) myState.maxCharTextArea = DEFAULT_MAX_CHAR_TEXT_AREA;
     }
 
     public String getOrInitUsername() {

@@ -19,6 +19,7 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.table.JBTable;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,6 +28,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.TableColumnModelEvent;
@@ -34,11 +36,15 @@ import javax.swing.event.TableColumnModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.Serial;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -62,6 +68,7 @@ public class DebtTable extends JBTable {
     private final int defaultRowHeight;
     private final JComboBox<String> priorityComboBox = new JComboBox<>();
     private final JComboBox<String> typeComboBox = new JComboBox<>();
+    private final AtomicReference<Color> baseColorAtomic = new AtomicReference<>(this.getBackground());
 
     public DebtTable(final Project project,
                      final DebtService debtService,
@@ -100,7 +107,6 @@ public class DebtTable extends JBTable {
     }
 
     private void initBackgroundColor(final Project project) {
-        final AtomicReference<Color> baseColorAtomic = new AtomicReference<>(this.getBackground());
 
         project.getMessageBus().connect().subscribe(EditorColorsManager.TOPIC, new EditorColorsListener() {
             @Override
@@ -138,7 +144,31 @@ public class DebtTable extends JBTable {
         });
     }
 
+    private static class TextAreaCellEditor extends DefaultCellEditor {
+        public TextAreaCellEditor() {
+            super(new JTextField());
+
+            final JBTextArea textArea = new JBTextArea();
+
+            final EditorDelegate editor = new EditorDelegate() {
+                public void setValue(Object value) {
+                    textArea.setText((value == null) ? "" : value.toString());
+                }
+
+                public Object getCellEditorValue() {
+                    return textArea.getText();
+                }
+            };
+
+            editorComponent = textArea;
+            clickCountToStart = 2;
+            delegate = editor;
+        }
+    }
+
     private void initColumns() {
+        this.getColumnModel().getColumn(4).setCellEditor(new TextAreaCellEditor());
+
         final JComboBox<Complexity> complexityComboBox = new JComboBox<>(Complexity.values());
         this.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(complexityComboBox));
 
@@ -149,6 +179,8 @@ public class DebtTable extends JBTable {
 
         final JComboBox<Risk> riskComboBox = new JComboBox<>(Risk.values());
         this.getColumnModel().getColumn(10).setCellEditor(new DefaultCellEditor(riskComboBox));
+
+        this.getColumnModel().getColumn(12).setCellEditor(new TextAreaCellEditor());
 
         final TableCellRenderer cellRenderer = new TableCellRenderer() {
             @Override
@@ -277,7 +309,7 @@ public class DebtTable extends JBTable {
     private void setWrappingRendererForModelColumn(int modelIndex) {
         int viewIdx = this.convertColumnIndexToView(modelIndex);
         if (viewIdx < 0) return;
-        this.getColumnModel().getColumn(viewIdx).setCellRenderer(new WrappingTextCellRenderer());
+        this.getColumnModel().getColumn(viewIdx).setCellRenderer(new WrappingTextCellRenderer(settings));
     }
 
     private void adjustRowHeightFor(int viewRow) {
@@ -413,10 +445,31 @@ public class DebtTable extends JBTable {
     }
 
     private static class WrappingTextCellRenderer extends JTextArea implements TableCellRenderer {
-        public WrappingTextCellRenderer() {
+        public WrappingTextCellRenderer(final DebtSettings settings) {
             setLineWrap(true);
             setWrapStyleWord(true);
-            setOpaque(true);
+
+            this.setDocument(new PlainDocument() {
+                @Serial
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
+                    super.insertString(offs, str, a);
+
+                    //has the length been exceeded
+                    final int max = settings.getState().getMaxCharTextArea();
+
+                    if (getLength() > max) {
+                        //remove the extra characters.
+                        //need to take into account the ellipsis, which is three characters.
+                        super.remove(max - 3, getLength() - max + 3);
+
+                        //insert ellipsis
+                        super.insertString(getLength(), "...", a);
+                    }
+                }
+            });
         }
 
         @Override
