@@ -35,7 +35,7 @@ public final class RepositoriesService {
         this.project = project;
         try {
             // Initialize repositories list from misc.xml on service creation
-            refreshFromMisc();
+            refreshFromVsc();
             if (LOG.isDebugEnabled()) LOG.debug("RepositoriesService initialized with roots=" + repositories);
         } catch (Throwable t) {
             LOG.warn("RepositoriesService initialization failed: " + t.getMessage(), t);
@@ -64,9 +64,9 @@ public final class RepositoriesService {
         try {
             String basePath = project.getBasePath();
             if (basePath == null || basePath.isBlank()) return Collections.emptyList();
-            final File misc = new File(basePath, ".idea/vcs.xml");
-            if (!misc.exists()) {
-                LOG.error("file vcs do not exist ? path :" + misc.getAbsolutePath());
+            final File vsc = new File(basePath, ".idea/vcs.xml");
+            if (!vsc.exists()) {
+                LOG.error("file vsc do not exist ? path :" + vsc.getAbsolutePath());
                 return Collections.emptyList();
             }
 
@@ -77,7 +77,7 @@ public final class RepositoriesService {
             }
             dbf.setNamespaceAware(false);
             DocumentBuilder db = dbf.newDocumentBuilder();
-            Document doc = db.parse(misc);
+            Document doc = db.parse(vsc);
 
             NodeList components = doc.getElementsByTagName("component");
             LinkedHashSet<String> roots = new LinkedHashSet<>();
@@ -114,7 +114,7 @@ public final class RepositoriesService {
     public List<Repository> getRepositories() {
         synchronized (repositories) {
             if (repositories.isEmpty()) {
-                refreshFromMisc();
+                refreshFromVsc();
             }
             return Collections.unmodifiableList(repositories);
         }
@@ -137,13 +137,13 @@ public final class RepositoriesService {
      *
      * @return
      */
-    public void refreshFromMisc() {
+    public void refreshFromVsc() {
         List<String> roots = getMavenOriginalRootFoldersFromIdeaVsc();
         setRepositories(convertRootPathsToRepositories(roots));
     }
 
     public void refreshAndLoadDebts() {
-        refreshFromMisc();
+        refreshFromVsc();
 
         final DebtService debtService = project.getService(DebtService.class);
         debtService.loadDebts();
