@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,7 @@ public class DebtTableFilter extends JPanel {
     private final JPanel row2Panel;
     private final JPanel row3Panel;
     private final TableRowSorter<DebtTableModel> sorter;
+    private final Consumer<Integer> nbDebtsConsumer;
 
     private final JButton toggleFiltersButton = new JButton("-"); // Expanded state shows "-"
     private final MultiSelectFilter<Integer> columnSelector = new MultiSelectFilter<>("Columns");
@@ -61,10 +63,16 @@ public class DebtTableFilter extends JPanel {
 
     private boolean filtersCollapsed = false;
 
-    public DebtTableFilter(final DebtService debtService, final DebtProviderService debtProviderService, final DebtTable table, final ColumnService columnService, final TableRowSorter<DebtTableModel> sorter) {
+    public DebtTableFilter(final DebtService debtService,
+                           final DebtProviderService debtProviderService,
+                           final DebtTable table,
+                           final ColumnService columnService,
+                           final TableRowSorter<DebtTableModel> sorter,
+                           final Consumer<Integer> nbDebtsConsumer) {
         this.debtService = debtService;
         this.debtProviderService = debtProviderService;
         this.sorter = sorter;
+        this.nbDebtsConsumer = nbDebtsConsumer;
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.table = table;
         this.columnService = columnService;
@@ -246,6 +254,9 @@ public class DebtTableFilter extends JPanel {
         } else {
             sorter.setRowFilter(RowFilter.andFilter(filters));
         }
+
+        nbDebtsConsumer.accept(table.getRowCount());
+
         if (LOG.isDebugEnabled()) {
             List<String> actives = new ArrayList<>();
             if (!fileFilter.getText().isBlank()) actives.add("file");

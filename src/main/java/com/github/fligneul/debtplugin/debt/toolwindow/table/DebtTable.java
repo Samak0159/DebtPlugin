@@ -40,6 +40,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 public class DebtTable extends JBTable {
@@ -57,7 +58,8 @@ public class DebtTable extends JBTable {
 
     public DebtTable(final Project project,
                      final DebtService debtService,
-                     final ColumnService columnService) {
+                     final ColumnService columnService,
+                     final Consumer<Integer> nbDebtsConsumer) {
         this.project = project;
         this.debtService = debtService;
         this.columnService = columnService;
@@ -66,6 +68,7 @@ public class DebtTable extends JBTable {
 
         this.tableModel = new DebtTableModel(debtService, columnService);
         this.setModel(tableModel);
+        nbDebtsConsumer.accept(this.getRowCount());
 
         // Re-apply wrapping and adjust heights when columns change (width/visibility/move)
         this.getColumnModel().addColumnModelListener(new DebtColumnModelListener(this));

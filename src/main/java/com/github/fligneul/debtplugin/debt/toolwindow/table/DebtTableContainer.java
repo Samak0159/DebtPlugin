@@ -6,6 +6,7 @@ import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.DebtServiceSelectionListener;
 import com.intellij.openapi.project.Project;
+import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBScrollPane;
 
 import javax.swing.JPanel;
@@ -15,6 +16,7 @@ import java.awt.FlowLayout;
 import java.awt.LayoutManager;
 import java.util.Comparator;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 
 public class DebtTableContainer extends JPanel {
 
@@ -30,10 +32,11 @@ public class DebtTableContainer extends JPanel {
         this.debtProviderService = project.getService(DebtProviderService.class);
         final ColumnService columnService = project.getService(ColumnService.class);
 
-        // Filters bar at the top
-        this.table = new DebtTable(project, debtService, columnService);
+        final JBLabel debtNumberLabel = new JBLabel();
+
+        this.table = new DebtTable(project, debtService, columnService, updateNumberLabel(debtNumberLabel));
         final TableRowSorter<DebtTableModel> sorter = new TableRowSorter<>(table.getTableModel());
-        this.filters = new DebtTableFilter(debtService, debtProviderService, table, columnService, sorter);
+        this.filters = new DebtTableFilter(debtService, debtProviderService, table, columnService, sorter, updateNumberLabel(debtNumberLabel));
         table.setRowSorter(sorter);
 
         project.getMessageBus().connect().subscribe(DebtService.SELECTION_TOPIC, new DebtServiceSelectionListener() {
@@ -50,13 +53,18 @@ public class DebtTableContainer extends JPanel {
 
         // Bottom buttons panel (export only; refresh moved to toolwindow title bar)
         final JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottomButtons.add(debtNumberLabel);
         bottomButtons.add(new DebtItemXslxExporter(project, table, debtProviderService.currentItems()));
 
         this.add(bottomButtons, BorderLayout.SOUTH);
     }
 
-    public void updateTable() {
-        table.updateTable();
+    private Consumer<Integer> updateNumberLabel(final JBLabel debtNumberLabel) {
+        return nb -> debtNumberLabel.setText("Nb debts : %s".formatted(nb));
+    }
+
+    public void updateTable(final boolean refreshColumnVisiblity) {
+        table.updateTable(refreshColumnVisiblity);
 
         table.getTableModel().clearAll();
 
