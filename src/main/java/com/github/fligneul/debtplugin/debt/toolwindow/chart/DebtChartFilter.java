@@ -7,6 +7,7 @@ import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.toolwindow.MultiSelectFilter;
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.project.Project;
 
 import javax.swing.BoxLayout;
@@ -85,8 +86,35 @@ public class DebtChartFilter extends JPanel {
             this.revalidate();
             this.repaint();
         });
-        row.add(toggleFiltersButtonChart, BorderLayout.EAST);
+
+        final JButton clearButton = new JButton();
+        clearButton.setIcon(AllIcons.Actions.DeleteTag);
+        clearButton.setToolTipText("Clear Filters");
+        clearButton.addActionListener(e -> clearFilters());
+
+        final JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        rightPanel.add(clearButton);
+        rightPanel.add(toggleFiltersButtonChart);
+
+        row.add(rightPanel, BorderLayout.EAST);
         return row;
+    }
+
+    private void clearFilters() {
+        fileFilterChart.setText("");
+        titleFilterChart.setText("");
+        descFilterChart.setText("");
+        userFilterChart.setText("");
+        wantedLevelFilterChart.clearSelection();
+        complexityFilterChart.clearSelection();
+        statusFilterChart.clearSelection();
+        priorityFilterChart.clearSelection();
+        riskFilterChart.clearSelection();
+        targetVersionFilterChart.setText("");
+        commentFilterChart.setText("");
+        estimationFilterChart.clearSelection();
+        moduleFilterChart.clearSelection();
+        jiraFilterChart.setText("");
     }
 
     private JPanel genereateRow2() {
