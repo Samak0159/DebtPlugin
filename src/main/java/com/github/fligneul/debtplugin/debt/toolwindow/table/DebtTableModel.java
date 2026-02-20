@@ -163,6 +163,13 @@ public class DebtTableModel extends DefaultTableModel {
         });
     }
 
+    public DebtItem remove(final int index) {
+        final DebtItem remove = debtItems.remove(index);
+        removeRow(index);
+
+        return remove;
+    }
+
     public String displayedFile(final String file) {
         String displayedFile = file.replace('\\', '/');
         int lastSlash = displayedFile.lastIndexOf('/');

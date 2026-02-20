@@ -241,12 +241,7 @@ public class DebtTable extends JBTable {
                             .withType(dialog.getType())
                             .build();
 
-                    LOG.info("Edit confirmed: file=" + newItem.getFile() + ":" + newItem.getLine() +
-                            " title=\"" + oldItem.getTitle() + "\" -> \"" + newItem.getTitle() + "\"" +
-                            " desc=\"" + oldItem.getDescription() + "\" -> \"" + newItem.getDescription() + "\"" +
-                            " user=" + newItem.getUsername() +
-                            " targetVersion=\"" + oldItem.getTargetVersion() + "\" -> \"" + newItem.getTargetVersion() + "\"" +
-                            " comment=\"" + oldItem.getComment() + "\" -> \"" + newItem.getComment() + "\"");
+                    LOG.info("Edit confirmed: debt=" + newItem);
 
                     debtService.update(oldItem, newItem);
                     updateTable();
@@ -262,9 +257,8 @@ public class DebtTable extends JBTable {
         return viewRow -> {
             int modelRow = this.convertRowIndexToModel(viewRow);
             if (modelRow >= 0 && modelRow < tableModel.getDebtItems().size()) {
-                DebtItem debtItem = tableModel.getDebtItems().get(modelRow);
-                LOG.info("Delete confirmed: file=" + debtItem.getFile() + ":" + debtItem.getLine() +
-                        " title=\"" + debtItem.getTitle() + "\" user=" + debtItem.getUsername());
+                final DebtItem debtItem = tableModel.remove(modelRow);
+                LOG.info("Delete confirmed: Debt=" + debtItem);
                 debtService.remove(debtItem);
                 updateTable();
             }
