@@ -421,7 +421,7 @@ public final class DebtService {
     public void refresh() {
         final RepositoriesService repositoriesService = project.getService(RepositoriesService.class);
 
-        repositoriesService.refreshFromVsc();
+        repositoriesService.refreshAndLoadDebts();
 
         project.getMessageBus().syncPublisher(TOPIC).refresh();
     }

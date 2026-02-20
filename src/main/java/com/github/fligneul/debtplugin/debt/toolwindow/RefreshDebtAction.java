@@ -25,6 +25,4 @@ public class RefreshDebtAction extends AnAction {
         final DebtService debtService = project.getService(DebtService.class);
         debtService.refresh();
     }
-
-    ;
 }
