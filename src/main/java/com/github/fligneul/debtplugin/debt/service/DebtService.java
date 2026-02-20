@@ -277,6 +277,10 @@ public final class DebtService {
         final String json = gson.toJson(items);
 
         try {
+            final File parentFolder = jsonPath.getParent().toFile();
+            if(!parentFolder.exists()){
+                parentFolder.mkdirs();
+            }
             Files.writeString(jsonPath, json, StandardCharsets.UTF_8);
 
             LOG.info("Saved repo debts. repoRoot=%s count=%s path=%s".formatted(
