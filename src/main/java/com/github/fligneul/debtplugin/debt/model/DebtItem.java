@@ -109,6 +109,10 @@ public class DebtItem {
         return new Builder();
     }
 
+    public static Builder newBuilder(boolean isUpdateInProgress) {
+        return new Builder(isUpdateInProgress);
+    }
+
     public Builder toBuilder() {
         return new Builder(this);
     }
@@ -264,6 +268,7 @@ public class DebtItem {
     }
 
     public static class Builder {
+        private final boolean isUpdateInProgress;
         private String id;
         private String file;
         private int line;
@@ -287,9 +292,16 @@ public class DebtItem {
 
         public Builder() {
             createDate = Instant.now().getEpochSecond();
+            this.isUpdateInProgress = true;
+        }
+
+        public Builder(boolean isUpdateInProgress) {
+            createDate = Instant.now().getEpochSecond();
+            this.isUpdateInProgress = isUpdateInProgress;
         }
 
         public Builder(DebtItem item) {
+            this.isUpdateInProgress = true;
             this.id = item.id;
             this.file = item.file;
             this.line = item.line;
@@ -413,7 +425,10 @@ public class DebtItem {
         }
 
         private Builder builder() {
-            updateDate = Instant.now().getEpochSecond();
+            if (isUpdateInProgress) {
+                updateDate = Instant.now().getEpochSecond();
+            }
+
             return this;
         }
 

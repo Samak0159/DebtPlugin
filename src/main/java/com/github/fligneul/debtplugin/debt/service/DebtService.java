@@ -169,17 +169,7 @@ public final class DebtService {
 
         debts.add(currentIndex, newDebtItem);
 
-        LOG.info("Updated debt: file=" + newDebtItem.getFile() + ":" + newDebtItem.getLine() +
-                " title=\"" + oldDebtItem.getTitle() + "\" -> \"" + newDebtItem.getTitle() + "\"" +
-                " desc=\"" + oldDebtItem.getDescription() + "\" -> \"" + newDebtItem.getDescription() + "\"" +
-                " user=" + newDebtItem.getUsername() +
-                " targetVersion=\"" + oldDebtItem.getTargetVersion() + "\" -> \"" + newDebtItem.getTargetVersion() + "\"" +
-                " comment=\"" + oldDebtItem.getComment() + "\" -> \"" + newDebtItem.getComment() + "\"" +
-                " wantedLevel=" + oldDebtItem.getWantedLevel() + "->" + newDebtItem.getWantedLevel() +
-                " complexity=" + oldDebtItem.getComplexity() + "->" + newDebtItem.getComplexity() +
-                " status=" + oldDebtItem.getStatus() + "->" + newDebtItem.getStatus() +
-                " priority=" + oldDebtItem.getPriority() + "->" + newDebtItem.getPriority() +
-                " risk=" + oldDebtItem.getRisk() + "->" + newDebtItem.getRisk());
+        LOG.info("Updated debt: " + newDebtItem);
 
         saveDebts();
 
@@ -515,7 +505,10 @@ public final class DebtService {
                 }
             }
 
-            DebtItem.Builder builder = DebtItem.newBuilder()
+            final long creationDate = getAsLong(obj, "creationDate", 0);
+            final long updateDate = getAsLong(obj, "updateDate", 0);
+
+            final DebtItem.Builder builder = DebtItem.newBuilder(false)
                     .withFile(file)
                     .withLine(line)
                     .withTitle(title)
@@ -532,7 +525,9 @@ public final class DebtService {
                     .withCurrentModule(currentModule)
                     .withLinks(links)
                     .withJira(jira)
-                    .withType(type);
+                    .withType(type)
+                    .withCreateDate(creationDate)
+                    .withUpdateDate(updateDate);
             if (id != null && !id.isBlank()) {
                 builder.withId(id);
             }
@@ -540,14 +535,23 @@ public final class DebtService {
         }
 
         private static String getAsString(JsonObject obj, String key, String def) {
-            JsonElement e = obj.get(key);
-            return e == null || e.isJsonNull() ? def : e.getAsString();
+            JsonElement jsonElement = obj.get(key);
+            return jsonElement == null || jsonElement.isJsonNull() ? def : jsonElement.getAsString();
         }
 
         private static int getAsInt(JsonObject obj, String key, int def) {
             try {
-                JsonElement e = obj.get(key);
-                return e == null || e.isJsonNull() ? def : e.getAsInt();
+                JsonElement jsonElement = obj.get(key);
+                return jsonElement == null || jsonElement.isJsonNull() ? def : jsonElement.getAsInt();
+            } catch (Exception ex) {
+                return def;
+            }
+        }
+
+        private static long getAsLong(JsonObject obj, String key, long def) {
+            try {
+                JsonElement jsonElement = obj.get(key);
+                return jsonElement == null || jsonElement.isJsonNull() ? def : jsonElement.getAsLong();
             } catch (Exception ex) {
                 return def;
             }
@@ -555,9 +559,9 @@ public final class DebtService {
 
         private static <E extends Enum<E>> E parseEnum(JsonObject obj, String key, E def, Class<E> enumType) {
             try {
-                String s = getAsString(obj, key, null);
-                if (s == null || s.isBlank()) return def;
-                return Enum.valueOf(enumType, s);
+                String string = getAsString(obj, key, null);
+                if (string == null || string.isBlank()) return def;
+                return Enum.valueOf(enumType, string);
             } catch (Exception ex) {
                 return def;
             }
