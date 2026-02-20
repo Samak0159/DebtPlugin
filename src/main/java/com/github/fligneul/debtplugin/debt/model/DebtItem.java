@@ -93,13 +93,13 @@ public class DebtItem {
                 : value;
     }
 
-    private Status getOrDefault(Status value, Status defaultValue){
+    private Status getOrDefault(Status value, Status defaultValue) {
         return value == null
                 ? defaultValue
                 : value;
     }
 
-    private Risk getOrDefault(Risk value, Risk defaultValue){
+    private Risk getOrDefault(Risk value, Risk defaultValue) {
         return value == null
                 ? defaultValue
                 : value;
@@ -400,6 +400,16 @@ public class DebtItem {
         public Builder withType(final String type) {
             this.type = type;
             return builder();
+        }
+
+        public Builder withCreateDate(final long createDate) {
+            this.createDate = createDate;
+            return builder();
+        }
+
+        public Builder withUpdateDate(final long updateDate) {
+            this.updateDate = updateDate;
+            return this;
         }
 
         private Builder builder() {

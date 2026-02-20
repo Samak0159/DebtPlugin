@@ -25,10 +25,7 @@ public class DebtTableModel extends DefaultTableModel {
 
     @Override
     public boolean isCellEditable(int row, int column) {
-        return column >= 3
-                && column != 5
-                && column != 17
-                && column != 18;
+        return column >= 3 && column != 5;
     }
 
     @Override
@@ -39,8 +36,8 @@ public class DebtTableModel extends DefaultTableModel {
             case 8 -> Status.class;         // Status column
             case 10 -> Risk.class;          // Risk column
             case 13 -> Integer.class;       // Estimation column
-            case 17 -> Integer.class;       // CreationDate column
-            case 18 -> Integer.class;       // UpdateDate column
+            case 17 -> Object.class;        // CreationDate column
+            case 18 -> Object.class;        // UpdateDate column
             case 19 -> Object.class;        // Action column (for button)
             default -> super.getColumnClass(columnIndex);
         };
@@ -123,6 +120,12 @@ public class DebtTableModel extends DefaultTableModel {
                     .build();
             case 16 -> oldDebtItem.toBuilder()
                     .withType((String) aValue)
+                    .build();
+            case 17 -> oldDebtItem.toBuilder()
+                    .withCreateDate((long) aValue)
+                    .build();
+            case 18 -> oldDebtItem.toBuilder()
+                    .withUpdateDate((long) aValue)
                     .build();
             default -> oldDebtItem;
         };

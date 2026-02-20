@@ -48,8 +48,11 @@ import java.io.Serial;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -182,14 +185,12 @@ public class DebtTable extends JBTable {
 
         this.getColumnModel().getColumn(12).setCellEditor(new TextAreaCellEditor());
 
+        this.getColumnModel().getColumn(16).setCellEditor(new DefaultCellEditor(typeComboBox));
         final TableCellRenderer cellRenderer = new TableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(final JTable table, final Object value, final boolean isSelected, final boolean hasFocus, final int row, final int column) {
                 if (value instanceof Long timestamp) {
-                    final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(settings.getState().getDatePattern())
-                            .withZone(ZoneId.systemDefault());
-
-                    final String date = formatter.format(Instant.ofEpochSecond(timestamp));
+                    final String date = convertTimeStampToPrintableDate(timestamp, settings);
 
                     return new JLabel(date);
                 } else {
@@ -197,9 +198,10 @@ public class DebtTable extends JBTable {
                 }
             }
         };
-        this.getColumnModel().getColumn(16).setCellEditor(new DefaultCellEditor(typeComboBox));
+        this.getColumnModel().getColumn(17).setCellEditor(new DateCellEditor(new JTextField(), settings));
         this.getColumnModel().getColumn(17).setCellRenderer(cellRenderer);
         this.getColumnModel().getColumn(18).setCellRenderer(cellRenderer);
+        this.getColumnModel().getColumn(18).setCellEditor(new DateCellEditor(new JTextField(), settings));
 
         // Action buttons (Edit + Delete) column is at index 18
         final TableColumn actionCol = this.getColumnModel().getColumn(19);
@@ -487,5 +489,81 @@ public class DebtTable extends JBTable {
             setSize(new Dimension(colWidth, Integer.MAX_VALUE));
             return this;
         }
+    }
+
+    private static class DateCellEditor extends DefaultCellEditor {
+        public DateCellEditor(JTextField textField, DebtSettings settings) {
+            super(textField);
+            delegate = new EditorDelegate() {
+                public void setValue(Object value) {
+                    if (value instanceof Long timestamp) {
+                        final String date = convertTimeStampToPrintableDate(timestamp, settings);
+                        textField.setText(date);
+                    } else {
+                        LOG.error("the %s is not a long instance, can't display it".formatted(value));
+                    }
+                }
+
+                public Object getCellEditorValue() {
+                    String userInput = textField.getText();
+
+                    String pattern = settings.getState().getDatePattern();
+                    final boolean isPatternHasHour = pattern.contains("HH");
+                    final boolean isPatternHasMinutes = pattern.contains("mm");
+                    final boolean isPatternHasSeconds = pattern.contains("ss");
+
+                    try {
+                        if (isPatternHasHour || isPatternHasMinutes || isPatternHasSeconds) {
+                            if (!isPatternHasHour) {
+                                pattern += "HH";
+                                userInput += "00";
+                            }
+
+                            if (!isPatternHasMinutes) {
+                                pattern += "mm";
+                                userInput += "00";
+                            }
+
+                            if (!isPatternHasSeconds) {
+                                pattern += "ss";
+                                userInput += "00";
+                            }
+
+                            return LocalDateTime.parse(userInput, getDateTimeFormatter(pattern))
+                                    .atZone(getZoneId())
+                                    .toInstant()
+                                    .getEpochSecond();
+
+                        } else {
+                            return LocalDate.parse(userInput, getDateTimeFormatter(settings.getState().getDatePattern()))
+                                    .atStartOfDay(getZoneId())
+                                    .toEpochSecond();
+                        }
+                    } catch (DateTimeParseException e) {
+                        LOG.error("impossible to read the value %s as a date with the pattern %s".formatted(userInput, settings.getState().getDatePattern()));
+                        return 0;
+                    }
+                }
+            };
+            textField.addActionListener(delegate);
+        }
+    }
+
+
+    private static String convertTimeStampToPrintableDate(final Long timestamp, final DebtSettings settings) {
+        final Instant currentValue = Instant.ofEpochSecond(timestamp);
+
+        final DateTimeFormatter formatter = getDateTimeFormatter(settings.getState().getDatePattern());
+
+        return formatter.format(currentValue);
+    }
+
+    private static DateTimeFormatter getDateTimeFormatter(final String datePattern) {
+        return DateTimeFormatter.ofPattern(datePattern)
+                .withZone(getZoneId());
+    }
+
+    private static ZoneId getZoneId() {
+        return ZoneId.systemDefault();
     }
 }

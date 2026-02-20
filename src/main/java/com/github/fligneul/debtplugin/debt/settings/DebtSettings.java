@@ -121,7 +121,7 @@ public final class DebtSettings implements PersistentStateComponent<DebtSettings
     private State myState = new State();
 
     @Override
-    public State getState() {
+    public @NotNull State getState() {
         if (myState.username == null || myState.username.isBlank()) {
             myState.username = UUID.randomUUID().toString();
         }
