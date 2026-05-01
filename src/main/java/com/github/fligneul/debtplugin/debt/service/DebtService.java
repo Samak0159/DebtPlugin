@@ -217,10 +217,10 @@ public final class DebtService {
     public void loadDebts() {
         debtsByRepository.clear();
         List<Repository> repositories = getRepositories();
-        String relPath = settings.getState().getDebtFilePath(project);
+        String absolutPath = settings.getState().getDebtFilePath(project);
         for (Repository repository : repositories) {
             try {
-                File jsonFile = resolveRepoDebtFile(repository.getRepositoryAbsolutePath(), relPath);
+                File jsonFile = resolveRepoDebtFile(repository.getRepositoryAbsolutePath(), absolutPath);
                 if (!jsonFile.exists()) {
                     debtsByRepository.put(repository, new ArrayList<>());
                     continue;
@@ -282,25 +282,25 @@ public final class DebtService {
         }
     }
 
-    private File resolveRepoDebtFile(String repoRoot, String relPath) {
+    private File resolveRepoDebtFile(String repoRoot, String absolutPath) {
         try {
             Map<String, String> overrides = settings.getState().getRepoDebtPaths();
             String val = overrides != null ? overrides.get(repoRoot) : null;
-            return resolveRepoDebtFileWithOverride(repoRoot, val, relPath);
+            return resolveRepoDebtFileWithOverride(repoRoot, val, absolutPath);
         } catch (Exception e) {
-            return new File(repoRoot, relPath);
+            return new File(repoRoot, absolutPath);
         }
     }
 
-    private static File resolveRepoDebtFileWithOverride(String repoRoot, String overrideOrBlank, String defaultRelPath) {
+    private static File resolveRepoDebtFileWithOverride(String repoRoot, String overrideOrBlank, String defaultAbsolutPath) {
         try {
             if (overrideOrBlank == null || overrideOrBlank.isBlank()) {
-                return new File(repoRoot, defaultRelPath);
+                return new File(defaultAbsolutPath);
             }
             File file = new File(overrideOrBlank);
             return file.isAbsolute() ? file : new File(repoRoot, overrideOrBlank);
         } catch (Exception e) {
-            return new File(repoRoot, defaultRelPath);
+            return new File(repoRoot, defaultAbsolutPath);
         }
     }
 
@@ -314,7 +314,7 @@ public final class DebtService {
     public void renameRepoDebtJsonIfPathChanged(Map<String, String> oldOverrides,
                                                 Map<String, String> newOverrides) {
         try {
-            String defaultRel = settings.getState().getDebtFilePath(project);
+            String defaultAbsolutPath = settings.getState().getDebtFilePath(project);
             LinkedHashSet<String> roots = new LinkedHashSet<>();
             if (oldOverrides != null) roots.addAll(oldOverrides.keySet());
             if (newOverrides != null) roots.addAll(newOverrides.keySet());
@@ -327,8 +327,8 @@ public final class DebtService {
                 if (root == null || root.isBlank()) continue;
                 String oldOverride = oldOverrides == null ? null : oldOverrides.get(root);
                 String newOverride = newOverrides == null ? null : newOverrides.get(root);
-                File oldFile = resolveRepoDebtFileWithOverride(root, oldOverride, defaultRel);
-                File newFile = resolveRepoDebtFileWithOverride(root, newOverride, defaultRel);
+                File oldFile = resolveRepoDebtFileWithOverride(root, oldOverride, defaultAbsolutPath);
+                File newFile = resolveRepoDebtFileWithOverride(root, newOverride, defaultAbsolutPath);
                 // Normalize
                 Path oldPath = oldFile.toPath().toAbsolutePath().normalize();
                 Path newPath = newFile.toPath().toAbsolutePath().normalize();
