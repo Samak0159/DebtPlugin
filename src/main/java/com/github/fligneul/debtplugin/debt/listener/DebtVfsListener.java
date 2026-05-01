@@ -11,6 +11,7 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent;
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -138,7 +139,7 @@ public final class DebtVfsListener implements BulkFileListener {
         service.update(debtsForRepository, oldItem, updated);
     }
 
-    private static String toProjectRelativeSafe(String anyPath, String basePath) {
+    private static String toProjectRelativeSafe(String anyPath, @Nullable String basePath) {
         if (anyPath == null) return "";
         try {
             Path p = Paths.get(anyPath);

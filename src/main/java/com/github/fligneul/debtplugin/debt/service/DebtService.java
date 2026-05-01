@@ -25,9 +25,11 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.util.messages.Topic;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -571,7 +573,8 @@ public final class DebtService {
         }
     }
 
-    public static String resolveCurrentModule(String filePath, String projectBasePath) {
+    @Nullable
+    public static String resolveCurrentModule(@Nullable String filePath, @Nullable String projectBasePath) {
         if (filePath == null) {
             return null;
         }
@@ -623,10 +626,11 @@ public final class DebtService {
         return null;
     }
 
+    @Nullable
     private static String textOfDirectChild(Element parent, String tag) {
-        for (org.w3c.dom.Node n = parent.getFirstChild(); n != null; n = n.getNextSibling()) {
-            if (n.getNodeType() == org.w3c.dom.Node.ELEMENT_NODE) {
-                Element e = (Element) n;
+        for (Node node = parent.getFirstChild(); node != null; node = node.getNextSibling()) {
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element e = (Element) node;
                 if (tag.equals(e.getTagName())) {
                     return e.getTextContent();
                 }
