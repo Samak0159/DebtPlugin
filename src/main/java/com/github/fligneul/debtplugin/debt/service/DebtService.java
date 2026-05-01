@@ -162,19 +162,22 @@ public final class DebtService {
     }
 
     public void update(final Map.Entry<Repository, List<DebtItem>> entry, final @NotNull DebtItem oldDebtItem, final @NotNull DebtItem newDebtItem) {
-        final List<DebtItem> debts = entry.getValue();
+        if (oldDebtItem.equals(newDebtItem)) {
+            LOG.debug("No update, old an newItem are the same");
+        } else {
+            final List<DebtItem> debts = entry.getValue();
 
-        final int currentIndex = debts.indexOf(oldDebtItem);
-        debts.remove(currentIndex);
+            final int currentIndex = debts.indexOf(oldDebtItem);
 
-        debts.add(currentIndex, newDebtItem);
+            debts.set(currentIndex, newDebtItem);
 
-        LOG.info("Updated debt: " + newDebtItem);
+            LOG.info("Updated debt: " + newDebtItem);
 
-        saveDebts();
+            saveDebts();
 
-        refresh();
-        refreshHighlighting();
+            refresh();
+            refreshHighlighting();
+        }
     }
 
     @NotNull
@@ -268,7 +271,7 @@ public final class DebtService {
 
         try {
             final File parentFolder = jsonPath.getParent().toFile();
-            if(!parentFolder.exists()){
+            if (!parentFolder.exists()) {
                 parentFolder.mkdirs();
             }
             Files.writeString(jsonPath, json, StandardCharsets.UTF_8);
