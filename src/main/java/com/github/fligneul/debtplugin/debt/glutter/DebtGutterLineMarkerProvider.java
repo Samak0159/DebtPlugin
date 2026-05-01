@@ -86,16 +86,19 @@ public class DebtGutterLineMarkerProvider implements LineMarkerProvider, DumbAwa
             if (debtsOnLine.size() == 1) {
                 DebtItem d = debtsOnLine.get(0);
                 return """
-                            Debt
-                                %s
-                                by %s
-                        """.formatted(getDebtName(d), d.getUsername());
+                        Debt
+                        &nbsp;&nbsp;&nbsp;&nbsp;%s
+                        by %s
+                        """
+                        .formatted(getDebtName(d), d.getUsername());
             } else {
                 StringBuilder sb = new StringBuilder();
                 for (DebtItem it : debtsOnLine) {
                     sb.append("Debt : \n ")
+                            .append("&nbsp;&nbsp;&nbsp;&nbsp;")
                             .append(getDebtName(it))
-                            .append(" \n by ")
+                            .append("\n")
+                            .append("by ")
                             .append(it.getUsername())
                             .append("\n");
                 }
