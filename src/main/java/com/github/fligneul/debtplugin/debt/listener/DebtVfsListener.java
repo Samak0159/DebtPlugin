@@ -54,7 +54,7 @@ public final class DebtVfsListener implements BulkFileListener {
                         oldPathAbs = buildPath(parent, Objects.toString(prop.getOldValue(), file.getName()));
                         newPathAbs = buildPath(parent, Objects.toString(prop.getNewValue(), file.getName()));
                     } else {
-                        LOG.warn("Event " + event.getClass() + " not handle");
+                        LOG.debug("Event " + event.getClass() + " not handle");
                         continue;
                     }
 
