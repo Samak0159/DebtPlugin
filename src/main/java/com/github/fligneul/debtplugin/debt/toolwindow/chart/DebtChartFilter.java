@@ -7,6 +7,7 @@ import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.toolwindow.MultiSelectFilter;
+import com.github.fligneul.debtplugin.debt.toolwindow.chart.panel.EChart;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
@@ -24,13 +25,14 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class DebtChartFilter extends JPanel {
-    private final ModulePieChartPanel pieChartPanel;
     private final DebtService debtService;
     private final DebtProviderService debtProviderService;
+    private final Consumer<EChart> onChartSwitch;
 
     private final JButton toggleFiltersButtonChart = new JButton("-");
     private final JTextField fileFilterChart = new JTextField(8);
@@ -50,10 +52,10 @@ public class DebtChartFilter extends JPanel {
 
     private boolean filtersCollapsedChart = false;
 
-    public DebtChartFilter(final Project project, final ModulePieChartPanel pieChartPanel) {
-        this.pieChartPanel = pieChartPanel;
+    public DebtChartFilter(final Project project, Consumer<EChart> onChartSwitch) {
         this.debtService = project.getService(DebtService.class);
         this.debtProviderService = project.getService(DebtProviderService.class);
+        this.onChartSwitch = onChartSwitch;
 
         // Configure chart tab enum filters as well
         complexityFilterChart.setOptions(Arrays.asList(Complexity.values()));
@@ -164,16 +166,24 @@ public class DebtChartFilter extends JPanel {
     }
 
     private JPanel generateRow4() {
-        final ComboBox<EClissifiers> groupByComboBox = new ComboBox<>(EClissifiers.values());
-        groupByComboBox.setSelectedItem(EClissifiers.DEFAULT);
-        groupByComboBox.addActionListener(e -> {
-            pieChartPanel.setGroupBy((EClissifiers) groupByComboBox.getSelectedItem());
+        final ComboBox<EClassifiers> classifierBox = new ComboBox<>(EClassifiers.values());
+        classifierBox.setSelectedItem(EClassifiers.DEFAULT);
+        classifierBox.addActionListener(e -> {
+            Stream.of(EChart.values())
+                    .map(EChart::getChartInstance)
+                    .forEach(chartPanel -> chartPanel.setGroupBy((EClassifiers) classifierBox.getSelectedItem()));
+
             this.updateFilters();
         });
 
-        final JPanel groupByPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        final ComboBox<EChart> chartSelector = new ComboBox<>(EChart.values());
+        chartSelector.addActionListener(e -> onChartSwitch.accept((EChart) chartSelector.getSelectedItem()));
+
+        final JPanel groupByPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         groupByPanel.add(new JLabel("Group by:"));
-        groupByPanel.add(groupByComboBox);
+        groupByPanel.add(classifierBox);
+        groupByPanel.add(new JLabel("Chart:"));
+        groupByPanel.add(chartSelector);
 
         return groupByPanel;
     }
@@ -259,7 +269,10 @@ public class DebtChartFilter extends JPanel {
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getJira, jiraFilterChart))
                 .toList();
 
-        pieChartPanel.setData(items);
+        Stream.of(EChart.values())
+                .map(EChart::getChartInstance)
+                .forEach(chartPanel -> chartPanel.setData(items));
+
     }
 
 

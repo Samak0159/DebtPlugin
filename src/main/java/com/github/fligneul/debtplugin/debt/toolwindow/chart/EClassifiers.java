@@ -1,6 +1,6 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart;
 
-public enum EClissifiers {
+public enum EClassifiers {
     Module,
     WantedLevel,
     Complexity,
@@ -10,5 +10,5 @@ public enum EClissifiers {
     Priority,
     Type;
 
-    static EClissifiers DEFAULT = Module;
+    public static final EClassifiers DEFAULT = Module;
 }
