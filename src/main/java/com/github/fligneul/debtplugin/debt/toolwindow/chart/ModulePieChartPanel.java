@@ -1,5 +1,7 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart;
 
+import com.github.fligneul.debtplugin.debt.model.DebtItem;
+
 import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -15,6 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Very lightweight pie chart panel used in the Debt toolwindow to visualize
@@ -23,13 +28,23 @@ import java.util.Objects;
 public class ModulePieChartPanel extends JPanel {
     private final LinkedHashMap<String, Integer> data = new LinkedHashMap<>();
 
+    private String title = "Debts by Module";
+    private EClissifiers groupBy;
+
     public ModulePieChartPanel() {
         setOpaque(true);
         setBackground(Color.WHITE);
+        setGroupBy(EClissifiers.DEFAULT);
     }
 
-    public void setData(Map<String, Integer> newData) {
+    public void setGroupBy(final EClissifiers groupByField) {
+        this.groupBy = groupByField;
+        this.title = "Debts by " + groupByField.name();
+    }
+
+    public void setData(List<DebtItem> items) {
         data.clear();
+        var newData = extractData(items);
         if (newData != null) {
             // Keep insertion order for stable coloring/legend
             if (!(newData instanceof LinkedHashMap)) {
@@ -40,6 +55,29 @@ public class ModulePieChartPanel extends JPanel {
         }
         revalidate();
         repaint();
+    }
+
+    private Map<String, Integer> extractData(List<DebtItem> items) {
+        final Function<DebtItem, String> classifier = switch (groupBy) {
+            case WantedLevel -> item -> String.valueOf(item.getWantedLevel());
+            case Complexity -> item -> String.valueOf(item.getComplexity());
+            case Status -> item -> String.valueOf(item.getStatus());
+            case Estimation -> item -> String.valueOf(item.getEstimation());
+            case Risk -> item -> String.valueOf(item.getRisk());
+            case Module -> item -> {
+                String m = item.getCurrentModule();
+                return (m == null || m.isBlank()) ? "Unknown" : m;
+            };
+            case Priority -> debtItem -> debtItem.getPriority().isEmpty()
+                    ? "Unknown"
+                    : debtItem.getPriority();
+            case Type -> debtItem -> debtItem.getType().isEmpty()
+                    ? "Unknown"
+                    : debtItem.getType();
+        };
+
+        return items.stream()
+                .collect(Collectors.groupingBy(classifier, TreeMap::new, Collectors.summingInt(e -> 1)));
     }
 
     @Override
@@ -116,9 +154,8 @@ public class ModulePieChartPanel extends JPanel {
             g2.setColor(Color.DARK_GRAY);
             Font old = g2.getFont();
             g2.setFont(old.deriveFont(Font.BOLD, Math.max(12f, old.getSize2D() + 2f)));
-            String title = "Debts by Module";
-            int tw = g2.getFontMetrics().stringWidth(title);
-            g2.drawString(title, Math.max(padding, cx - tw / 2), Math.max(padding + 2, pieY - 8));
+            int tw = g2.getFontMetrics().stringWidth(this.title);
+            g2.drawString(this.title, Math.max(padding, cx - tw / 2), Math.max(padding + 2, pieY - 8));
             g2.setFont(old);
         } finally {
             g2.dispose();
@@ -135,7 +172,7 @@ public class ModulePieChartPanel extends JPanel {
 
     private Color colorForIndex(int i) {
         // Fixed pleasant palette with fallback hashing
-        Color[] palette = new Color[] {
+        Color[] palette = new Color[]{
                 new Color(0x4E79A7), // blue
                 new Color(0xF28E2B), // orange
                 new Color(0xE15759), // red
@@ -160,6 +197,7 @@ public class ModulePieChartPanel extends JPanel {
         final Color color;
         final String label;
         final int value;
+
         LegendItem(Color color, String label, int value) {
             this.color = color;
             this.label = label;

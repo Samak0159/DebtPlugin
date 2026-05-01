@@ -58,8 +58,8 @@ public class DebtToolWindow extends JPanel {
 
         // Root with tabs
         final JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("debts", debtTableContainer);
-        tabs.addTab("modules", debtChartContainer);
+        tabs.addTab("Debts", debtTableContainer);
+        tabs.addTab("Charts", debtChartContainer);
         tabs.addTab("RelationShip", new JBScrollPane(relationshipGraphPanel));
 
         this.setLayout(new BorderLayout());

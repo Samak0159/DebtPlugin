@@ -9,6 +9,7 @@ import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.toolwindow.MultiSelectFilter;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.ComboBox;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -22,9 +23,9 @@ import java.awt.FlowLayout;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public class DebtChartFilter extends JPanel {
     private final ModulePieChartPanel pieChartPanel;
@@ -61,9 +62,10 @@ public class DebtChartFilter extends JPanel {
 
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-        final JPanel row2 = genereateRow2();
-        final JPanel row3 = genereateRow3();
-        final JPanel row1Chart = generateRow1(row2, row3);
+        final JPanel row2 = generateRow2();
+        final JPanel row3 = generateRow3();
+        final JPanel row4 = generateRow4();
+        final JPanel row1Chart = generateRow1(row2, row3, row4);
 
         // Initial visibility
         toggleFiltersButtonChart.setText(filtersCollapsedChart ? "+" : "-");
@@ -71,17 +73,17 @@ public class DebtChartFilter extends JPanel {
         this.add(row1Chart);
         this.add(row2);
         this.add(row3);
+        this.add(row4);
 
         initFilters();
     }
 
-    private JPanel generateRow1(final JPanel row2, final JPanel row3) {
+    private JPanel generateRow1(final JPanel... rows) {
         JPanel row = new JPanel(new BorderLayout(8, 2));
         row.add(new JLabel("Filter :"), BorderLayout.WEST);
         toggleFiltersButtonChart.addActionListener(e -> {
             filtersCollapsedChart = !filtersCollapsedChart;
-            row2.setVisible(!filtersCollapsedChart);
-            row3.setVisible(!filtersCollapsedChart);
+            Stream.of(rows).forEach(subRow -> subRow.setVisible(!filtersCollapsedChart));
             toggleFiltersButtonChart.setText(filtersCollapsedChart ? "+" : "-");
             this.revalidate();
             this.repaint();
@@ -117,7 +119,7 @@ public class DebtChartFilter extends JPanel {
         jiraFilterChart.setText("");
     }
 
-    private JPanel genereateRow2() {
+    private JPanel generateRow2() {
         final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         row.add(new JLabel("File:"));
         row.add(fileFilterChart);
@@ -139,7 +141,7 @@ public class DebtChartFilter extends JPanel {
         return row;
     }
 
-    private JPanel genereateRow3() {
+    private JPanel generateRow3() {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         row.add(new JLabel("WantedLevel:"));
         row.add(wantedLevelFilterChart);
@@ -159,6 +161,21 @@ public class DebtChartFilter extends JPanel {
         row.setVisible(!filtersCollapsedChart);
 
         return row;
+    }
+
+    private JPanel generateRow4() {
+        final ComboBox<EClissifiers> groupByComboBox = new ComboBox<>(EClissifiers.values());
+        groupByComboBox.setSelectedItem(EClissifiers.DEFAULT);
+        groupByComboBox.addActionListener(e -> {
+            pieChartPanel.setGroupBy((EClissifiers) groupByComboBox.getSelectedItem());
+            this.updateFilters();
+        });
+
+        final JPanel groupByPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        groupByPanel.add(new JLabel("Group by:"));
+        groupByPanel.add(groupByComboBox);
+
+        return groupByPanel;
     }
 
     private void initFilters() {
@@ -242,10 +259,7 @@ public class DebtChartFilter extends JPanel {
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getJira, jiraFilterChart))
                 .toList();
 
-
-        final Map<String, Integer> modules = debtService.extractModules(items);
-
-        pieChartPanel.setData(modules);
+        pieChartPanel.setData(items);
     }
 
 
@@ -253,8 +267,8 @@ public class DebtChartFilter extends JPanel {
         return filter.getSelected().isEmpty()
                 ? true
                 : filter.getSelected()
-                .stream()
-                .anyMatch(selected -> getterFct.apply(debtItem).equals(selected));
+                  .stream()
+                  .anyMatch(selected -> getterFct.apply(debtItem).equals(selected));
     }
 
     private boolean chartFilterContaining(final DebtItem debtItem, final Function<DebtItem, String> getterFct, final JTextField filter) {
