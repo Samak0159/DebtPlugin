@@ -1,5 +1,7 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart.panel;
 
+import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -18,6 +20,10 @@ import java.util.Objects;
  * the distribution of debt items by current module.
  */
 public class PieChartPanel extends AChartPanel {
+    public PieChartPanel(final EClassifiers chartClassifier) {
+        super(chartClassifier);
+    }
+
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(480, 360);

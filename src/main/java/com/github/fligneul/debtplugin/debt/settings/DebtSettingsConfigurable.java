@@ -4,6 +4,8 @@ import com.github.fligneul.debtplugin.debt.model.Field;
 import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.RepositoriesService;
+import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
+import com.github.fligneul.debtplugin.debt.toolwindow.chart.panel.EChart;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBScrollPane;
@@ -14,16 +16,21 @@ import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.table.DefaultTableModel;
+import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 public class DebtSettingsConfigurable implements Configurable {
     private final Project project;
@@ -50,6 +57,11 @@ public class DebtSettingsConfigurable implements Configurable {
     private final Map<String, JCheckBox> creationChecks = new LinkedHashMap<>(); // name -> checkbox
     private final JBTextField datePatternField;
     private final JBTextField maxCharField;
+
+    // Chart
+    private final JBTextField chartLimit = new JBTextField(5);
+    private final Map<EChart, JRadioButton> chartTypeButtons = new LinkedHashMap<>();
+    private final Map<EClassifiers, JRadioButton> classifierButtons = new LinkedHashMap<>();
 
     public DebtSettingsConfigurable(Project project) {
         this.project = project;
@@ -83,6 +95,39 @@ public class DebtSettingsConfigurable implements Configurable {
         creationPanel.setLayout(new BoxLayout(creationPanel, BoxLayout.Y_AXIS));
         buildCreateFieldPanelFromService();
 
+        final JPanel chartTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        chartTypePanel.add(new JLabel("Chart type:"));
+        final ButtonGroup chartTypeButtonGroup = new ButtonGroup();
+        chartTypeButtons.clear();
+        Stream.of(EChart.values()).forEach(chart -> {
+            final JRadioButton radioButton = new JRadioButton(chart.name(), chart == settings.getState().getChartType());
+            chartTypeButtonGroup.add(radioButton);
+            chartTypePanel.add(radioButton);
+            chartTypeButtons.put(chart, radioButton);
+        });
+
+        final JPanel chartLimitPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        chartLimitPanel.add(new JLabel("Chart Limit:"));
+        chartLimitPanel.add(chartLimit);
+        chartLimit.setText(String.valueOf(settings.getState().getChartDisplayLimitValues()));
+
+        final JPanel chartClassifierPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        chartClassifierPanel.add(new JLabel("Chart Classifier:"));
+        final ButtonGroup classifierButtonGroup = new ButtonGroup();
+        classifierButtons.clear();
+        Stream.of(EClassifiers.values()).forEach(classifier -> {
+            final JRadioButton radioButton = new JRadioButton(classifier.name(), classifier == settings.getState().getChartClassifier());
+            classifierButtonGroup.add(radioButton);
+            chartClassifierPanel.add(radioButton);
+            classifierButtons.put(classifier, radioButton);
+        });
+
+
+        var chartContainer = new JPanel(new BorderLayout());
+        chartContainer.add(chartTypePanel, BorderLayout.NORTH);
+        chartContainer.add(chartLimitPanel, BorderLayout.CENTER);
+        chartContainer.add(chartClassifierPanel, BorderLayout.SOUTH);
+
         return FormBuilder.createFormBuilder()
                 .addLabeledComponent("Username:", usernameField)
                 .addSeparator()
@@ -94,6 +139,8 @@ public class DebtSettingsConfigurable implements Configurable {
                 .addSeparator()
                 .addLabeledComponent("DatePattern:", datePatternField)
                 .addLabeledComponent("Max char table's textArea :", maxCharField)
+                .addSeparator()
+                .addLabeledComponent("Chart :", chartContainer)
                 .getPanel();
     }
 
@@ -211,8 +258,13 @@ public class DebtSettingsConfigurable implements Configurable {
 
         Map<String, Boolean> creationVisibilities = settings.getState().getCreationVisibility();
         Map<String, Boolean> currentSelection = collectCreationFieldsVisibility();
-        return !Objects.equals(currentSelection, creationVisibilities);
+        if (!Objects.equals(currentSelection, creationVisibilities)) return true;
 
+        if (settings.getState().getChartType() != getSelectedChartType()) return true;
+
+        if (settings.getState().getChartDisplayLimitValues() != Integer.parseInt(chartLimit.getText())) return true;
+
+        return settings.getState().getChartClassifier() != getSelectedClassifier();
     }
 
     @Override
@@ -255,8 +307,30 @@ public class DebtSettingsConfigurable implements Configurable {
             settings.getState().setMaxCharTextArea(Integer.parseInt(maxCharField.getText()));
         }
 
+        settings.getState().setChartType(getSelectedChartType());
+        settings.getState().setChartDisplayLimitValues(Integer.parseInt(chartLimit.getText()));
+        settings.getState().setChartClassifier(getSelectedClassifier());
+
         // Notify listeners
         project.getMessageBus().syncPublisher(DebtSettings.TOPIC).settingsChanged(settings.getState());
+    }
+
+    private EChart getSelectedChartType() {
+        return chartTypeButtons.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().isSelected())
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(EChart.Bar);
+    }
+
+    private EClassifiers getSelectedClassifier() {
+        return classifierButtons.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().isSelected())
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(EClassifiers.DEFAULT);
     }
 
     @Override
@@ -276,6 +350,11 @@ public class DebtSettingsConfigurable implements Configurable {
             e.setValue(e.getValue()); // keep map structure
             e.getValue().setSelected(v == null ? true : v);
         }
+
+        chartTypeButtons.forEach((type, button) -> button.setSelected(type == settings.getState().getChartType()));
+        classifierButtons.forEach((classifier, button) -> button.setSelected(classifier == settings.getState().getChartClassifier()));
+        chartLimit.setText(String.valueOf(settings.getState().getChartDisplayLimitValues()));
+
         columnsPanel.revalidate();
         columnsPanel.repaint();
     }

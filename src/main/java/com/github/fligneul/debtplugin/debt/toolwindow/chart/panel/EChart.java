@@ -1,22 +1,24 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart.panel;
 
-import java.util.function.Supplier;
+import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
+
+import java.util.function.Function;
 
 public enum EChart {
-    Pie(PieChartPanel::new),
-    Bar(BarChartPanel::new);
+    Pie(debtSettings -> new PieChartPanel(debtSettings.getState().getChartClassifier())),
+    Bar(debtSettings -> new BarChartPanel(debtSettings.getState().getChartClassifier()));
 
 
-    private final Supplier<AChartPanel> chartSupplier;
+    private final Function<DebtSettings, AChartPanel> chartFactory;
     private AChartPanel _instance;
 
-    EChart(Supplier<AChartPanel> chartPanelSupplier) {
-        this.chartSupplier = chartPanelSupplier;
+    EChart(Function<DebtSettings, AChartPanel> chartPanelSupplier) {
+        this.chartFactory = chartPanelSupplier;
     }
 
-    public AChartPanel getChartInstance() {
+    public AChartPanel getChartInstance(DebtSettings debtSettings) {
         if (_instance == null) {
-            _instance = chartSupplier.get();
+            _instance = chartFactory.apply(debtSettings);
         }
 
         return _instance;

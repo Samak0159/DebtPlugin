@@ -1,5 +1,6 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart;
 
+import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.toolwindow.chart.panel.AChartPanel;
 import com.github.fligneul.debtplugin.debt.toolwindow.chart.panel.EChart;
 import com.intellij.openapi.project.Project;
@@ -19,12 +20,13 @@ public class DebtChartContainer extends JPanel {
 
     public DebtChartContainer(final Project project, final LayoutManager layout) {
         super(layout);
+        final DebtSettings debtSettings = project.getService(DebtSettings.class);
 
         cardLayout = new CardLayout();
         chartCards = new JPanel(cardLayout);
         Stream.of(EChart.values())
                 .forEach(chart -> {
-                    final AChartPanel chartPanel = chart.getChartInstance();
+                    final AChartPanel chartPanel = chart.getChartInstance(debtSettings);
 
                     chartCards.add(chartPanel, chart.name());
                 });
@@ -34,6 +36,8 @@ public class DebtChartContainer extends JPanel {
         this.add(new JBScrollPane(filter), BorderLayout.NORTH);
 
         this.add(new JBScrollPane(chartCards), BorderLayout.CENTER);
+
+        showChart(debtSettings.getState().getChartType());
     }
 
     private void showChart(EChart chart) {

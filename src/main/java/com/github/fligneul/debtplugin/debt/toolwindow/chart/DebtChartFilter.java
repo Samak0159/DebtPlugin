@@ -6,6 +6,7 @@ import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
+import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.toolwindow.MultiSelectFilter;
 import com.github.fligneul.debtplugin.debt.toolwindow.chart.panel.EChart;
 import com.intellij.icons.AllIcons;
@@ -30,10 +31,9 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class DebtChartFilter extends JPanel {
-    private static final int DEFAULT_LIMIT_VALUE = 5;
-
     private final DebtService debtService;
     private final DebtProviderService debtProviderService;
+    private final DebtSettings debtSettings;
     private final Consumer<EChart> onChartSwitch;
 
     private final JButton toggleFiltersButtonChart = new JButton("-");
@@ -58,6 +58,7 @@ public class DebtChartFilter extends JPanel {
     public DebtChartFilter(final Project project, Consumer<EChart> onChartSwitch) {
         this.debtService = project.getService(DebtService.class);
         this.debtProviderService = project.getService(DebtProviderService.class);
+        this.debtSettings = project.getService(DebtSettings.class);
         this.onChartSwitch = onChartSwitch;
 
         // Configure chart tab enum filters as well
@@ -170,19 +171,20 @@ public class DebtChartFilter extends JPanel {
 
     private JPanel generateRow4() {
         final ComboBox<EClassifiers> classifierBox = new ComboBox<>(EClassifiers.values());
-        classifierBox.setSelectedItem(EClassifiers.DEFAULT);
+        classifierBox.setSelectedItem(debtSettings.getState().getChartClassifier());
         classifierBox.addActionListener(e -> {
             Stream.of(EChart.values())
-                    .map(EChart::getChartInstance)
+                    .map(eChart -> eChart.getChartInstance(this.debtSettings))
                     .forEach(chartPanel -> chartPanel.setGroupBy((EClassifiers) classifierBox.getSelectedItem()));
 
             this.updateFilters();
         });
 
         final ComboBox<EChart> chartSelector = new ComboBox<>(EChart.values());
+        chartSelector.setSelectedItem(debtSettings.getState().getChartType());
         chartSelector.addActionListener(e -> onChartSwitch.accept((EChart) chartSelector.getSelectedItem()));
 
-        limitTextField.setText(String.valueOf(DEFAULT_LIMIT_VALUE));
+        limitTextField.setText(String.valueOf(debtSettings.getState().getChartDisplayLimitValues()));
 
         final JPanel row4 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         row4.add(new JLabel("Group by:"));
@@ -277,10 +279,10 @@ public class DebtChartFilter extends JPanel {
                 .toList();
 
         Stream.of(EChart.values())
-                .map(EChart::getChartInstance)
+                .map(eChart -> eChart.getChartInstance(this.debtSettings))
                 .forEach(chartPanel -> {
                     var limit = limitTextField.getText() == null || limitTextField.getText().strip().isBlank()
-                            ? DEFAULT_LIMIT_VALUE
+                            ? debtSettings.getState().getChartDisplayLimitValues()
                             : Integer.parseInt(limitTextField.getText());
 
                     chartPanel.setData(items, limit);

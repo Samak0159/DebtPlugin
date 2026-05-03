@@ -18,10 +18,10 @@ public abstract class AChartPanel extends JPanel implements IChartsPanel {
     protected String title;
     protected EClassifiers groupBy;
 
-    public AChartPanel() {
+    public AChartPanel(final EClassifiers chartClassifier) {
         setOpaque(true);
         setBackground(Color.WHITE);
-        setGroupBy(EClassifiers.DEFAULT);
+        setGroupBy(chartClassifier);
     }
 
     @Override

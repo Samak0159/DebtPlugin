@@ -1,5 +1,7 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart.panel;
 
+import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -10,6 +12,10 @@ import java.awt.RenderingHints;
 import java.util.Objects;
 
 public class BarChartPanel extends AChartPanel {
+    public BarChartPanel(final EClassifiers chartClassifier) {
+        super(chartClassifier);
+    }
+
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(480, 360);
