@@ -18,6 +18,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.EditorFactory;
@@ -107,6 +109,11 @@ public final class DebtService {
                 " priority=" + debtItem.getPriority() +
                 " risk=" + debtItem.getRisk());
 
+        NotificationGroupManager.getInstance()
+                .getNotificationGroup("Debt Notification Group")
+                .createNotification("New item added", debtItem.getTitle(), NotificationType.INFORMATION)
+                .notify(project);
+
         saveDebts(repoRoot);
 
         refresh();
@@ -174,6 +181,11 @@ public final class DebtService {
             debts.set(currentIndex, newDebtItem);
 
             LOG.info("Updated debt: " + newDebtItem);
+
+            NotificationGroupManager.getInstance()
+                    .getNotificationGroup("Debt Notification Group")
+                    .createNotification("Item updated", newDebtItem.getTitle(), NotificationType.INFORMATION)
+                    .notify(project);
 
             saveDebts();
 

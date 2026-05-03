@@ -10,6 +10,7 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="Debt Notification Group" displayType="BALLOON"/>
         <toolWindow id="Technical Debt" anchor="bottom" icon="/icons/technicalDebt.svg" factoryClass="com.github.fligneul.debtplugin.debt.toolwindow.DebtToolWindowFactory"/>
         <projectConfigurable
                 parentId="tools"

@@ -10,6 +10,8 @@ import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.colors.EditorColorsListener;
 import com.intellij.openapi.editor.colors.EditorColorsManager;
@@ -411,6 +413,12 @@ public class DebtTable extends JBTable {
                         String id = debtItem.getId();
                         StringSelection selection = new StringSelection(id);
                         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+
+                        NotificationGroupManager.getInstance()
+                                .getNotificationGroup("Debt Notification Group")
+                                .createNotification("Debt ID copied to clipboard", id, NotificationType.INFORMATION)
+                                .notify(project);
+
                         return;
                     }
 
