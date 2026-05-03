@@ -42,6 +42,8 @@ import javax.swing.text.PlainDocument;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.Serial;
@@ -399,9 +401,19 @@ public class DebtTable extends JBTable {
         public void mouseClicked(MouseEvent event) {
             if (event.getClickCount() == 2) {
                 int viewRow = table.getSelectedRow();
-                if (viewRow >= 0) {
+                int viewColumn = table.getSelectedColumn();
+                if (viewRow >= 0 && viewColumn >= 0) {
                     int modelRow = table.convertRowIndexToModel(viewRow);
+                    int modelColumn = table.convertColumnIndexToModel(viewColumn);
                     DebtItem debtItem = tableModel.getDebtItems().get(modelRow);
+
+                    if (modelColumn == 0) {
+                        String id = debtItem.getId();
+                        StringSelection selection = new StringSelection(id);
+                        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+                        return;
+                    }
+
                     String stored = debtItem.getFile();
                     int line = debtItem.getLine();
                     String absolutePath = stored;
