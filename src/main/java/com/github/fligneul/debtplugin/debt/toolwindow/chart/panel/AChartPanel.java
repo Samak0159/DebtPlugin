@@ -5,16 +5,16 @@ import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
 
 import javax.swing.JPanel;
 import java.awt.Color;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public abstract class AChartPanel extends JPanel implements IChartsPanel {
 
-    protected final LinkedHashMap<String, Integer> data = new LinkedHashMap<>();
+    protected final List<ChartModel> data = new ArrayList<>();
     protected String title;
     protected EClassifiers groupBy;
 
@@ -31,21 +31,18 @@ public abstract class AChartPanel extends JPanel implements IChartsPanel {
     }
 
     @Override
-    public void setData(List<DebtItem> items) {
+    public void setData(List<DebtItem> items, final int limit) {
         data.clear();
-        var newData = extractData(items);
-        if (newData != null) {
-            if (!(newData instanceof LinkedHashMap)) {
-                data.putAll(new LinkedHashMap<>(newData));
-            } else {
-                data.putAll(newData);
-            }
-        }
+
+        this.data.addAll(extractData(items)
+                .stream()
+                .limit(limit)
+                .toList());
         revalidate();
         repaint();
     }
 
-    private Map<String, Integer> extractData(List<DebtItem> items) {
+    private List<ChartModel> extractData(List<DebtItem> items) {
         final Function<DebtItem, String> classifier = switch (groupBy) {
             case WantedLevel -> item -> String.valueOf(item.getWantedLevel());
             case Complexity -> item -> String.valueOf(item.getComplexity());
@@ -65,7 +62,15 @@ public abstract class AChartPanel extends JPanel implements IChartsPanel {
         };
 
         return items.stream()
-                .collect(Collectors.groupingBy(classifier, TreeMap::new, Collectors.summingInt(e -> 1)));
+                .collect(Collectors.groupingBy(classifier, TreeMap::new, Collectors.summingInt(e -> 1)))
+                .entrySet()
+                .stream()
+                .map(entry -> new ChartModel(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparing(ChartModel::nbValues).reversed())
+                .toList();
+    }
+
+    protected record ChartModel(String name, int nbValues) {
     }
 
 }

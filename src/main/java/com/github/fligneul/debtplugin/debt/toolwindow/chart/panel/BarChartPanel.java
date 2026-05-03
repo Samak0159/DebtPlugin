@@ -1,7 +1,5 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart.panel;
 
-import com.github.fligneul.debtplugin.debt.model.DebtItem;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -9,13 +7,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class BarChartPanel extends AChartPanel {
     @Override
@@ -30,13 +22,13 @@ public class BarChartPanel extends AChartPanel {
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int totalCount = data.values().stream().mapToInt(Integer::intValue).sum();
+            int totalCount = data.stream().map(ChartModel::nbValues).mapToInt(Integer::intValue).sum();
             if (totalCount <= 0) {
                 drawCenteredText(g2, "No data", getWidth(), getHeight());
                 return;
             }
 
-            int maxValue = data.values().stream().mapToInt(Integer::intValue).max().orElse(1);
+            int maxValue = data.stream().map(ChartModel::nbValues).mapToInt(Integer::intValue).max().orElse(1);
 
             int padding = 40;
             int bottomPadding = 60;
@@ -53,41 +45,41 @@ public class BarChartPanel extends AChartPanel {
             int barCount = data.size();
             int barWidth = (chartWidth / barCount) * 2 / 3;
             int barGap = (chartWidth / barCount) / 3;
-            
+
             if (barWidth < 5) barWidth = 5;
 
             int x = padding + barGap;
             int index = 0;
             FontMetrics fm = g2.getFontMetrics();
 
-            for (Map.Entry<String, Integer> entry : data.entrySet()) {
-                int value = entry.getValue();
+            for (ChartModel chartModel : data) {
+                int value = chartModel.nbValues();
                 int barHeight = (int) ((double) value / maxValue * chartHeight);
-                
+
                 Color color = colorForIndex(index++);
                 g2.setColor(color);
                 g2.fillRect(x, padding + chartHeight - barHeight, barWidth, barHeight);
-                
+
                 g2.setColor(new Color(0, 0, 0, 60));
                 g2.drawRect(x, padding + chartHeight - barHeight, barWidth, barHeight);
 
                 // Label
                 g2.setColor(Color.DARK_GRAY);
-                String label = Objects.toString(entry.getKey(), "Unknown");
-                
+                String label = Objects.toString(chartModel.name(), "Unknown");
+
                 // Truncate label if too long
                 if (fm.stringWidth(label) > barWidth + barGap) {
-                     // Very simple truncation
-                     while (label.length() > 3 && fm.stringWidth(label + "...") > barWidth + barGap * 2) {
-                         label = label.substring(0, label.length() - 1);
-                     }
-                     label += "...";
+                    // Very simple truncation
+                    while (label.length() > 3 && fm.stringWidth(label + "...") > barWidth + barGap * 2) {
+                        label = label.substring(0, label.length() - 1);
+                    }
+                    label += "...";
                 }
-                
+
                 int labelX = x + (barWidth - fm.stringWidth(label)) / 2;
                 int labelY = padding + chartHeight + fm.getAscent() + 5;
                 g2.drawString(label, labelX, labelY);
-                
+
                 // Value on top of bar
                 String valueStr = String.valueOf(value);
                 int valueX = x + (barWidth - fm.stringWidth(valueStr)) / 2;

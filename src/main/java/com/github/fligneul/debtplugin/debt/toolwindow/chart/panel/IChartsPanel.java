@@ -8,5 +8,5 @@ import java.util.List;
 public interface IChartsPanel {
     void setGroupBy(EClassifiers groupByField);
 
-    void setData(List<DebtItem> items);
+    void setData(List<DebtItem> items, final int limit);
 }

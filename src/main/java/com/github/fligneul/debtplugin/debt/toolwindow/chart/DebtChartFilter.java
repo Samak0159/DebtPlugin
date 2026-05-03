@@ -30,6 +30,8 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class DebtChartFilter extends JPanel {
+    private static final int DEFAULT_LIMIT_VALUE = 5;
+
     private final DebtService debtService;
     private final DebtProviderService debtProviderService;
     private final Consumer<EChart> onChartSwitch;
@@ -51,6 +53,7 @@ public class DebtChartFilter extends JPanel {
     private final JTextField jiraFilterChart = new JTextField(8);
 
     private boolean filtersCollapsedChart = false;
+    private final JTextField limitTextField = new JTextField(3);
 
     public DebtChartFilter(final Project project, Consumer<EChart> onChartSwitch) {
         this.debtService = project.getService(DebtService.class);
@@ -179,13 +182,16 @@ public class DebtChartFilter extends JPanel {
         final ComboBox<EChart> chartSelector = new ComboBox<>(EChart.values());
         chartSelector.addActionListener(e -> onChartSwitch.accept((EChart) chartSelector.getSelectedItem()));
 
-        final JPanel groupByPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
-        groupByPanel.add(new JLabel("Group by:"));
-        groupByPanel.add(classifierBox);
-        groupByPanel.add(new JLabel("Chart:"));
-        groupByPanel.add(chartSelector);
+        limitTextField.setText(String.valueOf(DEFAULT_LIMIT_VALUE));
 
-        return groupByPanel;
+        final JPanel row4 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        row4.add(new JLabel("Group by:"));
+        row4.add(classifierBox);
+        row4.add(new JLabel("Chart:"));
+        row4.add(chartSelector);
+        row4.add(limitTextField);
+
+        return row4;
     }
 
     private void initFilters() {
@@ -213,6 +219,7 @@ public class DebtChartFilter extends JPanel {
         targetVersionFilterChart.getDocument().addDocumentListener(docListenerChart);
         commentFilterChart.getDocument().addDocumentListener(docListenerChart);
         jiraFilterChart.getDocument().addDocumentListener(docListenerChart);
+        limitTextField.getDocument().addDocumentListener(docListenerChart);
 
         wantedLevelFilterChart.addSelectionListener(this::filterValues);
         complexityFilterChart.addSelectionListener(this::filterValues);
@@ -271,17 +278,21 @@ public class DebtChartFilter extends JPanel {
 
         Stream.of(EChart.values())
                 .map(EChart::getChartInstance)
-                .forEach(chartPanel -> chartPanel.setData(items));
+                .forEach(chartPanel -> {
+                    var limit = limitTextField.getText() == null || limitTextField.getText().strip().isBlank()
+                            ? DEFAULT_LIMIT_VALUE
+                            : Integer.parseInt(limitTextField.getText());
+
+                    chartPanel.setData(items, limit);
+                });
 
     }
 
 
     private <T> boolean chartFilterContaining(final DebtItem debtItem, final Function<DebtItem, T> getterFct, final MultiSelectFilter<T> filter) {
-        return filter.getSelected().isEmpty()
-                ? true
-                : filter.getSelected()
-                  .stream()
-                  .anyMatch(selected -> getterFct.apply(debtItem).equals(selected));
+        return filter.getSelected().isEmpty() || filter.getSelected()
+                .stream()
+                .anyMatch(selected -> getterFct.apply(debtItem).equals(selected));
     }
 
     private boolean chartFilterContaining(final DebtItem debtItem, final Function<DebtItem, String> getterFct, final JTextField filter) {

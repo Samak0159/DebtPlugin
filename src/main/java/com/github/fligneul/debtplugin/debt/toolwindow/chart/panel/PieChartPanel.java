@@ -11,7 +11,6 @@ import java.awt.RenderingHints;
 import java.awt.geom.Arc2D;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -31,7 +30,7 @@ public class PieChartPanel extends AChartPanel {
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int total = data.values().stream().mapToInt(Integer::intValue).sum();
+            int total = data.stream().map(ChartModel::nbValues).mapToInt(Integer::intValue).sum();
             if (total <= 0) {
                 drawCenteredText(g2, "No data", getWidth(), getHeight());
                 return;
@@ -49,9 +48,9 @@ public class PieChartPanel extends AChartPanel {
             double start = 0.0;
             List<LegendItem> legendItems = new ArrayList<>();
             int index = 0;
-            for (Map.Entry<String, Integer> e : data.entrySet()) {
-                String label = Objects.toString(e.getKey(), "Unknown");
-                int value = Math.max(0, e.getValue());
+            for (ChartModel chartModel : data) {
+                String label = Objects.toString(chartModel.name(), "Unknown");
+                int value = Math.max(0, chartModel.nbValues());
                 if (value == 0) continue;
                 Color color = colorForIndex(index++);
                 double extent = 360.0 * value / total;
