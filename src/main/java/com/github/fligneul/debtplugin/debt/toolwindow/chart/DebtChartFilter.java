@@ -45,6 +45,7 @@ public class DebtChartFilter extends JPanel {
     private final MultiSelectFilter<Complexity> complexityFilterChart = new MultiSelectFilter<>("Complexity");
     private final MultiSelectFilter<Status> statusFilterChart = new MultiSelectFilter<>("Status");
     private final MultiSelectFilter<String> priorityFilterChart = new MultiSelectFilter<>("Priority");
+    private final MultiSelectFilter<String> typeFilterChart = new MultiSelectFilter<>("Type");
     private final MultiSelectFilter<Risk> riskFilterChart = new MultiSelectFilter<>("Risk");
     private final JTextField targetVersionFilterChart = new JTextField(6);
     private final JTextField commentFilterChart = new JTextField(8);
@@ -117,6 +118,7 @@ public class DebtChartFilter extends JPanel {
         complexityFilterChart.clearSelection();
         statusFilterChart.clearSelection();
         priorityFilterChart.clearSelection();
+        typeFilterChart.clearSelection();
         riskFilterChart.clearSelection();
         targetVersionFilterChart.setText("");
         commentFilterChart.setText("");
@@ -157,6 +159,8 @@ public class DebtChartFilter extends JPanel {
         row.add(statusFilterChart);
         row.add(new JLabel("Priority:"));
         row.add(priorityFilterChart);
+        row.add(new JLabel("Type:"));
+        row.add(typeFilterChart);
         row.add(new JLabel("Risk:"));
         row.add(riskFilterChart);
         row.add(new JLabel("Estimation:"));
@@ -227,6 +231,7 @@ public class DebtChartFilter extends JPanel {
         complexityFilterChart.addSelectionListener(this::filterValues);
         statusFilterChart.addSelectionListener(this::filterValues);
         priorityFilterChart.addSelectionListener(this::filterValues);
+        typeFilterChart.addSelectionListener(this::filterValues);
         riskFilterChart.addSelectionListener(this::filterValues);
         estimationFilterChart.addSelectionListener(this::filterValues);
         moduleFilterChart.addSelectionListener(this::filterValues);
@@ -234,17 +239,20 @@ public class DebtChartFilter extends JPanel {
 
     public void updateFilters() {
         final TreeSet<String> priorities = new TreeSet<>(Comparator.naturalOrder());
+        final TreeSet<String> types = new TreeSet<>(Comparator.naturalOrder());
         final TreeSet<Integer> wantedLevels = new TreeSet<>(Comparator.naturalOrder());
         final TreeSet<Integer> estimations = new TreeSet<>(Comparator.naturalOrder());
 
         for (DebtItem item : debtProviderService.currentItems()) {
             priorities.add(item.getPriority());
+            types.add(item.getType());
             wantedLevels.add(item.getWantedLevel());
             estimations.add(item.getEstimation());
         }
 
         // Aggregate modules from items that match the chart-specific filters
         priorityFilterChart.setOptions(priorities);
+        typeFilterChart.setOptions(types);
         wantedLevelFilterChart.setOptions(wantedLevels);
         estimationFilterChart.setOptions(estimations);
 
@@ -264,6 +272,7 @@ public class DebtChartFilter extends JPanel {
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getComplexity, complexityFilterChart))
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getStatus, statusFilterChart))
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getPriority, priorityFilterChart))
+                .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getType, typeFilterChart))
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getRisk, riskFilterChart))
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getTargetVersion, targetVersionFilterChart))
                 .filter(debtItem -> chartFilterContaining(debtItem, DebtItem::getComment, commentFilterChart))

@@ -52,6 +52,7 @@ public class DebtTableFilter extends JPanel {
     private final MultiSelectFilter<Complexity> complexityFilter = new MultiSelectFilter<>("Complexity");
     private final MultiSelectFilter<Status> statusFilter = new MultiSelectFilter<>("Status");
     private final MultiSelectFilter<String> priorityFilter = new MultiSelectFilter<>("Priority");
+    private final MultiSelectFilter<String> typeFilter = new MultiSelectFilter<>("Type");
     private final MultiSelectFilter<Risk> riskFilter = new MultiSelectFilter<>("Risk");
     private final JTextField targetVersionFilter = new JTextField(6);
     private final JTextField commentFilter = new JTextField(8);
@@ -168,6 +169,8 @@ public class DebtTableFilter extends JPanel {
         rowPanel.add(statusFilter);
         rowPanel.add(new JLabel("Priority:"));
         rowPanel.add(priorityFilter);
+        rowPanel.add(new JLabel("Type:"));
+        rowPanel.add(typeFilter);
         rowPanel.add(new JLabel("Risk:"));
         rowPanel.add(riskFilter);
         rowPanel.add(new JLabel("Estimation:"));
@@ -211,6 +214,7 @@ public class DebtTableFilter extends JPanel {
         complexityFilter.addSelectionListener(this::applyFilters);
         statusFilter.addSelectionListener(this::applyFilters);
         priorityFilter.addSelectionListener(this::applyFilters);
+        typeFilter.addSelectionListener(this::applyFilters);
         riskFilter.addSelectionListener(this::applyFilters);
         estimationFilter.addSelectionListener(this::applyFilters);
         moduleFilter.addSelectionListener(this::applyFilters);
@@ -248,6 +252,7 @@ public class DebtTableFilter extends JPanel {
                         : value)
                 .collect(Collectors.toSet());
         addMultiSelectExact(filters, modulesSelected, 15);
+        addMultiSelectExact(filters, typeFilter.getSelected(),16);
 
         if (filters.isEmpty()) {
             sorter.setRowFilter(null);
@@ -267,6 +272,7 @@ public class DebtTableFilter extends JPanel {
             if (!complexityFilter.getSelected().isEmpty()) actives.add("complexity");
             if (!statusFilter.getSelected().isEmpty()) actives.add("status");
             if (!priorityFilter.getSelected().isEmpty()) actives.add("priority");
+            if (!typeFilter.getSelected().isEmpty()) actives.add("type");
             if (!riskFilter.getSelected().isEmpty()) actives.add("risk");
             if (!targetVersionFilter.getText().isBlank()) actives.add("targetVersion");
             if (!commentFilter.getText().isBlank()) actives.add("comment");
@@ -324,6 +330,7 @@ public class DebtTableFilter extends JPanel {
         complexityFilter.clearSelection();
         statusFilter.clearSelection();
         priorityFilter.clearSelection();
+        typeFilter.clearSelection();
         riskFilter.clearSelection();
         targetVersionFilter.setText("");
         commentFilter.setText("");
@@ -340,12 +347,13 @@ public class DebtTableFilter extends JPanel {
         lineFilter.setText(line);
     }
 
-    public void updateFilters(final TreeSet<String> priorities, final TreeSet<Integer> wantedLevels, final TreeSet<Integer> estimations) {
+    public void updateFilters(final TreeSet<String> priorities, final TreeSet<String> types, final TreeSet<Integer> wantedLevels, final TreeSet<Integer> estimations) {
         final LinkedHashMap<String, Integer> modules = debtService.extractModules(debtProviderService.currentItems());
 
         moduleFilter.setOptions(modules.keySet());
 
         priorityFilter.setOptions(priorities);
+        typeFilter.setOptions(types);
         wantedLevelFilter.setOptions(wantedLevels);
         estimationFilter.setOptions(estimations);
 

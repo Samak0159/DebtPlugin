@@ -69,16 +69,18 @@ public class DebtTableContainer extends JPanel {
         table.getTableModel().clearAll();
 
         final TreeSet<String> priorities = new TreeSet<>(Comparator.naturalOrder());
+        final TreeSet<String> types = new TreeSet<>(Comparator.naturalOrder());
         final TreeSet<Integer> wantedLevels = new TreeSet<>(Comparator.naturalOrder());
         final TreeSet<Integer> estimations = new TreeSet<>(Comparator.naturalOrder());
 
         for (DebtItem item : debtProviderService.currentItems()) {
             table.getTableModel().addDebtItem(item);
             priorities.add(item.getPriority());
+            types.add(item.getType());
             wantedLevels.add(item.getWantedLevel());
             estimations.add(item.getEstimation());
         }
 
-        filters.updateFilters(priorities, wantedLevels, estimations);
+        filters.updateFilters(priorities, types, wantedLevels, estimations);
     }
 }
