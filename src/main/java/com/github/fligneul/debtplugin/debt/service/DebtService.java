@@ -151,8 +151,11 @@ public final class DebtService {
                 .filter(entry -> entry.getValue().contains(oldDebtItem))
                 .findFirst()
                 .ifPresentOrElse(entry -> update(entry, oldDebtItem, newDebtItem),
-                        () -> LOG.warn("Attempted to update non-existing debt: file=" + oldDebtItem.getFile() + ":" + oldDebtItem.getLine() +
-                                " title=\"" + oldDebtItem.getTitle() + "\""));
+                        () -> LOG.warn("Attempted to update non-existing debt: old=" + oldDebtItem +
+                                " currentList=\"" + debtsByRepository.values()
+                                .stream()
+                                .flatMap(Collection::stream)
+                                .toList() + "\""));
     }
 
     public void update(final Map.Entry<Repository, List<DebtItem>> entry, final @NotNull DebtItem oldDebtItem, final @NotNull DebtItem newDebtItem) {

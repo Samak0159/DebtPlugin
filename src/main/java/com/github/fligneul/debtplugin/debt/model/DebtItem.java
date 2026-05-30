@@ -224,21 +224,19 @@ public class DebtItem {
                 && Objects.equals(username, debtItem.username)
                 && complexity == debtItem.complexity
                 && status == debtItem.status
-                && priority == debtItem.priority
+                && priority.equals(debtItem.priority)
                 && risk == debtItem.risk
                 && Objects.equals(targetVersion, debtItem.targetVersion)
                 && Objects.equals(comment, debtItem.comment)
                 && Objects.equals(currentModule, debtItem.currentModule)
                 && Objects.equals(links, debtItem.links)
                 && Objects.equals(jira, debtItem.jira)
-                && Objects.equals(type, debtItem.type)
-                && Objects.equals(creationDate, debtItem.creationDate)
-                && Objects.equals(updateDate, debtItem.updateDate);
+                && Objects.equals(type, debtItem.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links, jira, type, creationDate, updateDate);
+        return Objects.hash(id, file, line, title, description, username, wantedLevel, complexity, status, priority, risk, targetVersion, comment, estimation, currentModule, links, jira, type);
     }
 
     @Override
