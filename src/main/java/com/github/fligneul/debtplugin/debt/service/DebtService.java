@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -51,7 +52,7 @@ public final class DebtService {
     private final DebtWriterService debtWriterService;
     private final DebtReaderService debtReaderService;
     // Unified storage: key = repository, value = items in that repo
-    private final Map<Repository, List<DebtItem>> debtsByRepository = new LinkedHashMap<>();
+    private final Map<Repository, List<DebtItem>> debtsByRepository = new ConcurrentHashMap<>();
 
     public DebtService(@NotNull Project project) {
         this.project = Objects.requireNonNull(project, "project");
