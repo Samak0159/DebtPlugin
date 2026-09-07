@@ -7,6 +7,7 @@ import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.toolwindow.MultiSelectFilter;
+import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.diagnostic.Logger;
 
@@ -345,6 +346,47 @@ public class DebtTableFilter extends JPanel {
 
     public void setLineFilter(final String line) {
         lineFilter.setText(line);
+    }
+
+    public void filterByClassifier(final EClassifiers classifier, final String categoryValue) {
+        if (classifier == null || categoryValue == null) return;
+        switch (classifier) {
+            case WantedLevel -> {
+                try {
+                    int val = Integer.parseInt(categoryValue);
+                    wantedLevelFilter.setSelected(List.of(val));
+                } catch (NumberFormatException e) {
+                    LOG.error("An error occurred while parsing wanted level filter value", e);
+                }
+            }
+            case Complexity -> Arrays.stream(Complexity.values())
+                    .filter(c -> c.name().equalsIgnoreCase(categoryValue))
+                    .findFirst()
+                    .ifPresent(c -> complexityFilter.setSelected(List.of(c)));
+            case Status -> Arrays.stream(Status.values())
+                    .filter(s -> s.name().equalsIgnoreCase(categoryValue))
+                    .findFirst()
+                    .ifPresent(s -> statusFilter.setSelected(List.of(s)));
+            case Estimation -> {
+                try {
+                    int val = Integer.parseInt(categoryValue);
+                    estimationFilter.setSelected(List.of(val));
+                } catch (NumberFormatException ignored) {}
+            }
+            case Risk -> Arrays.stream(Risk.values())
+                    .filter(r -> r.name().equalsIgnoreCase(categoryValue))
+                    .findFirst()
+                    .ifPresent(r -> riskFilter.setSelected(List.of(r)));
+            case Priority -> {
+                String target = "Unknown".equalsIgnoreCase(categoryValue) ? "" : categoryValue;
+                priorityFilter.setSelected(List.of(target));
+            }
+            case Type -> {
+                String target = "Unknown".equalsIgnoreCase(categoryValue) ? "" : categoryValue;
+                typeFilter.setSelected(List.of(target));
+            }
+            case Module -> moduleFilter.setSelected(List.of(categoryValue));
+        }
     }
 
     public void updateFilters(final TreeSet<String> priorities, final TreeSet<String> types, final TreeSet<Integer> wantedLevels, final TreeSet<Integer> estimations) {

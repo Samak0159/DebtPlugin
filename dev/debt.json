@@ -1,0 +1,24 @@
+[
+  {
+    "id": "9322da7f-4fc4-4f6e-984c-1a4aec751426",
+    "file": "src/test/java/testapp/DebtGeneratorApp.java",
+    "line": 57,
+    "title": "WriterService existe",
+    "description": "",
+    "username": "Samak",
+    "wantedLevel": 3,
+    "complexity": "Easy",
+    "status": "Submitted",
+    "priority": "",
+    "risk": "Medium",
+    "targetVersion": "",
+    "comment": "",
+    "estimation": 0,
+    "jira": "",
+    "currentModule": "",
+    "links": {},
+    "type": "",
+    "creationDate": 1788784094,
+    "updateDate": 1788784116
+  }
+]

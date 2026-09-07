@@ -56,7 +56,6 @@ public class DebtGeneratorApp {
 
         // Todo should use a WriterService but i doesn't exist yet.
         var gson = new GsonBuilder()
-                .registerTypeAdapter(DebtItem.class, new DebtService.DebtItemDeserializer())
                 .setPrettyPrinting()
                 .create();
 

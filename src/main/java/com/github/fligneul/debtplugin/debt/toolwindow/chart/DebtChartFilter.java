@@ -34,6 +34,7 @@ public class DebtChartFilter extends JPanel {
     private final DebtService debtService;
     private final DebtProviderService debtProviderService;
     private final DebtSettings debtSettings;
+    private final Project project;
     private final Consumer<EChart> onChartSwitch;
 
     private final JButton toggleFiltersButtonChart = new JButton("-");
@@ -57,6 +58,7 @@ public class DebtChartFilter extends JPanel {
     private final JTextField limitTextField = new JTextField(3);
 
     public DebtChartFilter(final Project project, Consumer<EChart> onChartSwitch) {
+        this.project = project;
         this.debtService = project.getService(DebtService.class);
         this.debtProviderService = project.getService(DebtProviderService.class);
         this.debtSettings = project.getService(DebtSettings.class);
@@ -109,7 +111,7 @@ public class DebtChartFilter extends JPanel {
         return row;
     }
 
-    private void clearFilters() {
+    public void clearFilters() {
         fileFilterChart.setText("");
         titleFilterChart.setText("");
         descFilterChart.setText("");
@@ -178,7 +180,7 @@ public class DebtChartFilter extends JPanel {
         classifierBox.setSelectedItem(debtSettings.getState().getChartClassifier());
         classifierBox.addActionListener(e -> {
             Stream.of(EChart.values())
-                    .map(eChart -> eChart.getChartInstance(this.debtSettings))
+                    .map(eChart -> eChart.getChartInstance(this.debtSettings, this.project))
                     .forEach(chartPanel -> chartPanel.setGroupBy((EClassifiers) classifierBox.getSelectedItem()));
 
             this.updateFilters();
@@ -288,7 +290,7 @@ public class DebtChartFilter extends JPanel {
                 .toList();
 
         Stream.of(EChart.values())
-                .map(eChart -> eChart.getChartInstance(this.debtSettings))
+                .map(eChart -> eChart.getChartInstance(this.debtSettings, this.project))
                 .forEach(chartPanel -> {
                     var limit = limitTextField.getText() == null || limitTextField.getText().strip().isBlank()
                             ? debtSettings.getState().getChartDisplayLimitValues()
@@ -310,4 +312,7 @@ public class DebtChartFilter extends JPanel {
         return getterFct.apply(debtItem).contains(filter.getText());
     }
 
+    public void setFileFilterValue(final String file) {
+        fileFilterChart.setText(file);
+    }
 }

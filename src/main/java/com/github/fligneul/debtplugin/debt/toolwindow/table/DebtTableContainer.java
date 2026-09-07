@@ -5,9 +5,11 @@ import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtProviderService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
 import com.github.fligneul.debtplugin.debt.service.DebtServiceSelectionListener;
+import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBScrollPane;
+import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.JPanel;
 import javax.swing.table.TableRowSorter;
@@ -43,8 +45,14 @@ public class DebtTableContainer extends JPanel {
             @Override
             public void select(String file, final int line) {
                 filters.clearFilters();
-                filters.setFileFilterValue(table.getTableModel().displayedFile(file));
+                filters.setFileFilterValue(FilenameUtils.getName(file));
                 filters.setLineFilter(String.valueOf(line));
+            }
+
+            @Override
+            public void select(EClassifiers classifier, String categoryValue) {
+                filters.clearFilters();
+                filters.filterByClassifier(classifier, categoryValue);
             }
         });
 

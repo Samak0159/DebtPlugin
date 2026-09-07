@@ -6,6 +6,7 @@ import com.github.fligneul.debtplugin.debt.model.Risk;
 import com.github.fligneul.debtplugin.debt.model.Status;
 import com.github.fligneul.debtplugin.debt.service.ColumnService;
 import com.github.fligneul.debtplugin.debt.service.DebtService;
+import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
@@ -141,7 +142,7 @@ public class DebtTableModel extends DefaultTableModel {
         debtItems.add(debtItem);
         addRow(new Object[]{
                 debtItem.getId(),
-                displayedFile(debtItem.getFile()),
+                FilenameUtils.getName(debtItem.getFile()),
                 debtItem.getLine(),
                 debtItem.getTitle(),
                 debtItem.getDescription(),
@@ -168,13 +169,6 @@ public class DebtTableModel extends DefaultTableModel {
         removeRow(index);
 
         return remove;
-    }
-
-    public String displayedFile(final String file) {
-        String displayedFile = file.replace('\\', '/');
-        int lastSlash = displayedFile.lastIndexOf('/');
-        if (lastSlash >= 0) displayedFile = displayedFile.substring(lastSlash + 1);
-        return displayedFile;
     }
 
     public List<DebtItem> getDebtItems() {

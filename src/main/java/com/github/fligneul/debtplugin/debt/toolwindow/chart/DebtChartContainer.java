@@ -1,10 +1,13 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart;
 
+import com.github.fligneul.debtplugin.debt.service.DebtService;
+import com.github.fligneul.debtplugin.debt.service.DebtServiceSelectionListener;
 import com.github.fligneul.debtplugin.debt.settings.DebtSettings;
 import com.github.fligneul.debtplugin.debt.toolwindow.chart.panel.AChartPanel;
 import com.github.fligneul.debtplugin.debt.toolwindow.chart.panel.EChart;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBScrollPane;
+import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
@@ -26,12 +29,25 @@ public class DebtChartContainer extends JPanel {
         chartCards = new JPanel(cardLayout);
         Stream.of(EChart.values())
                 .forEach(chart -> {
-                    final AChartPanel chartPanel = chart.getChartInstance(debtSettings);
+                    final AChartPanel chartPanel = chart.getChartInstance(debtSettings, project);
 
                     chartCards.add(chartPanel, chart.name());
                 });
 
         filter = new DebtChartFilter(project, this::showChart);
+
+        project.getMessageBus().connect().subscribe(DebtService.SELECTION_TOPIC, new DebtServiceSelectionListener() {
+            @Override
+            public void select(String file, final int line) {
+                filter.clearFilters();
+                filter.setFileFilterValue(FilenameUtils.getName(file));
+            }
+
+            @Override
+            public void select(EClassifiers classifier, String categoryValue) {
+                // Chart filter state update if needed
+            }
+        });
 
         this.add(new JBScrollPane(filter), BorderLayout.NORTH);
 

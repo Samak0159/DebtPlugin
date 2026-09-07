@@ -1,6 +1,7 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart.panel;
 
 import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
+import com.intellij.openapi.project.Project;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -9,7 +10,10 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.geom.Arc2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +24,24 @@ import java.util.Objects;
  * the distribution of debt items by current module.
  */
 public class PieChartPanel extends AChartPanel {
-    public PieChartPanel(final EClassifiers chartClassifier) {
-        super(chartClassifier);
+
+    private record PieHitRegion(Shape shape, String categoryName) {
+    }
+
+    private final List<PieHitRegion> hitRegions = new ArrayList<>();
+
+    public PieChartPanel(final EClassifiers chartClassifier, Project project) {
+        super(chartClassifier, project);
+    }
+
+    @Override
+    protected String getCategoryAt(Point p) {
+        for (PieHitRegion region : hitRegions) {
+            if (region.shape.contains(p)) {
+                return region.categoryName;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -32,6 +52,7 @@ public class PieChartPanel extends AChartPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        hitRegions.clear();
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -64,6 +85,7 @@ public class PieChartPanel extends AChartPanel {
                 g2.setColor(color);
                 Arc2D.Double arc = new Arc2D.Double(pieX, pieY, pieSize, pieSize, start, extent, Arc2D.PIE);
                 g2.fill(arc);
+                hitRegions.add(new PieHitRegion(arc, label));
 
                 legendItems.add(new LegendItem(color, label, value));
                 start += extent;
@@ -79,6 +101,9 @@ public class PieChartPanel extends AChartPanel {
             int legendY = padding + 4;
             FontMetrics fm = g2.getFontMetrics();
             for (LegendItem it : legendItems) {
+                int itemHeight = Math.max(20, fm.getHeight());
+                hitRegions.add(new PieHitRegion(new Rectangle(legendX, legendY, legendWidth, itemHeight), it.label));
+
                 // Color box
                 int box = 12;
                 g2.setColor(it.color);
@@ -91,7 +116,7 @@ public class PieChartPanel extends AChartPanel {
                 g2.setColor(Color.DARK_GRAY);
                 g2.drawString(text, legendX + box + 8, legendY + box - 2);
 
-                legendY += Math.max(20, fm.getHeight());
+                legendY += itemHeight;
             }
 
             // Title

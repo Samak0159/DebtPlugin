@@ -1,6 +1,7 @@
 package com.github.fligneul.debtplugin.debt.toolwindow.chart.panel;
 
 import com.github.fligneul.debtplugin.debt.toolwindow.chart.EClassifiers;
+import com.intellij.openapi.project.Project;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -8,12 +9,32 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class BarChartPanel extends AChartPanel {
-    public BarChartPanel(final EClassifiers chartClassifier) {
-        super(chartClassifier);
+
+    private record BarHitRegion(Rectangle bounds, String categoryName) {
+    }
+
+    private final List<BarHitRegion> hitRegions = new ArrayList<>();
+
+    public BarChartPanel(final EClassifiers chartClassifier, final Project project) {
+        super(chartClassifier, project);
+    }
+
+    @Override
+    protected String getCategoryAt(Point p) {
+        for (BarHitRegion region : hitRegions) {
+            if (region.bounds.contains(p)) {
+                return region.categoryName;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -24,6 +45,7 @@ public class BarChartPanel extends AChartPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        hitRegions.clear();
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -61,6 +83,11 @@ public class BarChartPanel extends AChartPanel {
             for (ChartModel chartModel : data) {
                 int value = chartModel.nbValues();
                 int barHeight = (int) ((double) value / maxValue * chartHeight);
+
+                int barY = padding + chartHeight - barHeight;
+                int hitY = Math.min(barY, padding + chartHeight - 10);
+                int hitHeight = padding + chartHeight + bottomPadding - hitY;
+                hitRegions.add(new BarHitRegion(new Rectangle(x, hitY, barWidth, hitHeight), chartModel.name()));
 
                 Color color = colorForIndex(index++);
                 g2.setColor(color);
